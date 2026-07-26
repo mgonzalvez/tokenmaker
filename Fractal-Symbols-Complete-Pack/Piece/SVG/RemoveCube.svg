@@ -1,0 +1,22 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="RemoveCube">
+<g clip-path="url(#clip0)">
+<g class="fractal-symbol">
+<g id="Group">
+<path id="Vector" d="M50.1688 65.8284V99.9983L66.3753 90.7477L50.1688 65.8284Z" fill="black"/>
+<path id="Vector_2" d="M57.026 46.8281L59.7152 50.9155L54.5879 54.2142L75.097 85.7309L93.0246 75.4763V26.0679L57.026 46.8281Z" fill="black"/>
+</g>
+<path id="Vector_3" d="M42.5364 54.0349L47.6278 50.7362L47.09 49.9116L6 26.0679V75.5122L48.5959 100.001V63.3931L42.5364 54.0349Z" fill="black"/>
+<g id="Group_2">
+<path id="Vector_4" d="M56.1957 45.5002L92.2301 24.7042L49.3832 0L32.854 9.57333L56.1957 45.5002Z" fill="black"/>
+<path id="Vector_5" d="M24.1759 14.6273L6.78613 24.7026L45.187 47.0045L24.1759 14.6273Z" fill="black"/>
+</g>
+</g>
+</g>
+</g>
+<defs>
+<clipPath id="clip0">
+<rect width="100" height="100" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -1,0 +1,16 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="LoseCube">
+<g clip-path="url(#clip0)">
+<g class="fractal-symbol">
+<path id="Vector" d="M62.7181 43.5293H66.6263C67.6303 43.5293 68.4191 44.3182 68.4191 45.3221V54.6444C68.4191 55.6484 67.6303 56.4372 66.6263 56.4372H50.1688V99.9654L93.0157 75.4763V26.0679L62.7181 43.5293Z" fill="black"/>
+<path id="Vector_2" d="M32.1743 54.6444V45.3221C32.1743 44.3182 32.9631 43.5293 33.967 43.5293H36.1183L6 26.0679V75.5122L48.6318 100.001V56.4731H34.0029C32.9631 56.4372 32.1743 55.6484 32.1743 54.6444Z" fill="black"/>
+<path id="Vector_3" d="M92.197 24.7042L49.3859 0L6.75415 24.7042L39.2031 43.5281H59.5688L92.197 24.7042Z" fill="black"/>
+</g>
+</g>
+</g>
+<defs>
+<clipPath id="clip0">
+<rect width="100" height="100" fill="white"/>
+</clipPath>
+</defs>
+</svg>

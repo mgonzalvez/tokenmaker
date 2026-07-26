@@ -1,0 +1,626 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Design printable board-game tokens and arrange them on print-ready PDF sheets.">
+  <meta name="theme-color" content="#f6f7fb">
+  <meta property="og:title" content="TokenMaker — Design Printable Board-Game Tokens">
+  <meta property="og:description" content="Design exact-size print-and-play tokens and arrange them on Letter or A4 PDF sheets.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tokenmaker.gonzhome.us/">
+  <title>TokenMaker — Design Printable Board-Game Tokens</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem("tokenmaker-theme");
+      const theme = savedTheme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <link rel="canonical" href="https://tokenmaker.gonzhome.us/">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <a class="brand" href="#" aria-label="TokenMaker home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40">
+            <path d="M20 3 34.7 11.5v17L20 37 5.3 28.5v-17Z"/>
+            <path d="m20 10 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5-5.8-3.1-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9Z"/>
+          </svg>
+        </span>
+        <span class="brand-copy">
+          <strong>TokenMaker</strong>
+          <span>Design printable board-game tokens</span>
+        </span>
+      </a>
+
+      <div class="header-actions">
+        <span id="save-status" class="save-status" aria-live="polite">New project</span>
+        <button id="save-project-btn" class="header-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5zM8 4v6h8V4M8 20v-6h8v6"/></svg>
+          Save
+        </button>
+        <button id="load-project-btn" class="header-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h6l2 2h8v11H4zM12 12v6m-3-3 3 3 3-3"/></svg>
+          Load
+        </button>
+        <input id="load-project-input" type="file" accept="application/json,.json" hidden>
+        <button id="tutorial-btn" class="header-button" type="button" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M10.5 9a2 2 0 1 1 3.1 1.7c-1 .6-1.6 1.1-1.6 2.3M12 17h.01"/></svg>
+          Tutorial
+        </button>
+        <div class="menu-wrap">
+          <button id="related-btn" class="header-button" type="button" aria-expanded="false">
+            Related sites
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+          </button>
+          <nav id="related-menu" class="related-sites-panel" aria-label="Related print and play sites" hidden>
+            <a href="https://gonzhome.us" target="_blank" rel="noopener noreferrer">Gonzhome <span>Home for the complete tool collection</span></a>
+            <a href="https://boardsplitter.gonzhome.us" target="_blank" rel="noopener noreferrer">BoardSplitter <span>Print large boards</span></a>
+            <a href="https://formatter.gonzhome.us" target="_blank" rel="noopener noreferrer">Card Formatter <span>Format card sheets</span></a>
+            <a href="https://extractor.gonzhome.us" target="_blank" rel="noopener noreferrer">Card Extractor <span>Extract card images</span></a>
+            <a href="https://prototyper.gonzhome.us" target="_blank" rel="noopener noreferrer">Card Prototyper <span>Build prototype cards</span></a>
+          </nav>
+        </div>
+        <button id="theme-btn" class="icon-button" type="button" aria-label="Toggle light and dark appearance">
+          <svg class="sun-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg class="moon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4 8.5 8.5 0 1 0 20 15.2Z"/></svg>
+        </button>
+        <button id="license-btn" class="header-button license-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 6v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6z"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg>
+          Free icon license
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <div>
+        <p class="eyebrow">PRINT &amp; PLAY WORKSHOP</p>
+        <h1>Make a token. Build a sheet. Print and play.</h1>
+        <p>Create clear prototype tokens from open game symbols or your own artwork, then arrange exact-size copies on Letter or A4 paper.</p>
+      </div>
+      <div class="workflow-tabs" role="tablist" aria-label="TokenMaker workflow">
+        <button id="designer-tab" class="workflow-tab active" type="button" role="tab" aria-selected="true" aria-controls="designer-workspace">
+          <span>1</span> Design tokens
+        </button>
+        <button id="sheet-tab" class="workflow-tab" type="button" role="tab" aria-selected="false" aria-controls="sheet-workspace">
+          <span>2</span> Build sheet
+          <small id="sheet-tab-count">0 placed</small>
+        </button>
+      </div>
+    </section>
+
+    <section id="designer-workspace" class="workspace" role="tabpanel" aria-labelledby="designer-tab">
+      <div class="designer-grid">
+        <aside class="panel library-panel" aria-label="Icon library">
+          <div class="panel-heading">
+            <div>
+              <p class="step-label">Artwork</p>
+              <h2>Choose an icon</h2>
+            </div>
+            <span id="icon-count" class="count-pill">312</span>
+          </div>
+
+          <label class="search-field">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg>
+            <input id="icon-search" type="search" placeholder="Search symbols" autocomplete="off">
+          </label>
+
+          <div id="category-chips" class="category-chips" aria-label="Icon categories"></div>
+
+          <div id="icon-grid" class="icon-grid" aria-live="polite"></div>
+          <p id="no-icon-results" class="empty-message" hidden>No symbols match that search.</p>
+
+          <div class="upload-block">
+            <button id="upload-art-btn" class="secondary-button wide" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m-4 4 4-4 4 4M4 14v6h16v-6"/></svg>
+              Upload SVG, PNG, or JPG
+            </button>
+            <input id="upload-art-input" type="file" accept="image/svg+xml,image/png,image/jpeg" hidden>
+            <p>Your artwork stays in this browser and can be embedded in a project file.</p>
+          </div>
+        </aside>
+
+        <section class="panel preview-panel" aria-label="Live token preview">
+          <div class="preview-heading">
+            <div>
+              <p class="step-label">Live preview</p>
+              <div class="draft-title-row">
+                <input id="design-name" class="design-name-input" value="Heart token" maxlength="60" aria-label="Token design name">
+                <span id="draft-dimensions" class="dimension-pill">1 in circle</span>
+              </div>
+            </div>
+            <button id="reset-draft-btn" class="text-button" type="button">Reset</button>
+          </div>
+
+          <div class="token-stage">
+            <div class="stage-glow" aria-hidden="true"></div>
+            <div id="token-preview-wrap" class="token-preview-wrap">
+              <svg id="token-preview" viewBox="0 0 1000 1000" role="img" aria-label="Live token preview"></svg>
+            </div>
+            <p class="drag-hint">
+              Drag the preview to position
+              <span class="drag-target-control" role="group" aria-label="Preview drag target">
+                <button class="mini-segment active" type="button" data-drag-target="icon">icon</button>
+                <button class="mini-segment" type="button" data-drag-target="value">value</button>
+              </span>
+            </p>
+          </div>
+
+          <div class="preview-actions">
+            <button id="add-design-btn" class="primary-button" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+              Add to project
+            </button>
+            <button id="new-design-btn" class="secondary-button" type="button">New design</button>
+            <div class="export-menu-wrap">
+              <button id="export-image-btn" class="secondary-button" type="button" aria-expanded="false">
+                Export image
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+              </button>
+              <div id="export-image-menu" class="compact-menu" hidden>
+                <button type="button" data-export-image="png">PNG · transparent</button>
+                <button type="button" data-export-image="jpg">JPG · white background</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="project-strip">
+            <div class="strip-heading">
+              <div>
+                <h3>Project tokens</h3>
+                <p>Design first; choose quantities in the Sheet Builder.</p>
+              </div>
+              <div class="strip-heading-actions">
+                <span id="design-count" class="count-pill muted">0 designs</span>
+                <button id="open-sheet-builder-btn" class="sheet-builder-cta" type="button" hidden>
+                  <span>
+                    <b>Build printable sheet</b>
+                    <small>Choose quantities and export PDF</small>
+                  </span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                </button>
+              </div>
+            </div>
+            <div id="design-strip" class="design-strip">
+              <div id="design-empty" class="empty-design-card">
+                <span>+</span>
+                <p>Your saved token designs will appear here.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="panel inspector-panel" aria-label="Token settings">
+          <div class="panel-heading">
+            <div>
+              <p class="step-label">Token settings</p>
+              <h2>Style your token</h2>
+            </div>
+            <div class="unit-toggle" role="group" aria-label="Measurement unit">
+              <button class="active" type="button" data-unit="in">in</button>
+              <button type="button" data-unit="mm">mm</button>
+            </div>
+          </div>
+
+          <details class="control-section" open>
+            <summary>
+              <span><b>01</b> Shape &amp; size</span>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+            </summary>
+            <div class="control-body">
+              <div class="shape-grid" role="group" aria-label="Token shape">
+                <button class="shape-button active" type="button" data-shape="circle">
+                  <svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="14"/></svg>
+                  Circle
+                </button>
+                <button class="shape-button" type="button" data-shape="square">
+                  <svg viewBox="0 0 40 40" aria-hidden="true"><rect x="7" y="7" width="26" height="26" rx="2"/></svg>
+                  Square
+                </button>
+                <button class="shape-button" type="button" data-shape="hexagon">
+                  <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M11 7h18l9 13-9 13H11L2 20Z"/></svg>
+                  Hex
+                </button>
+              </div>
+
+              <div class="field-group">
+                <div class="field-heading">
+                  <label for="size-range">Physical size</label>
+                  <div class="number-suffix">
+                    <input id="size-number" type="number" min="0.5" max="3" step="0.05" value="1">
+                    <span id="size-unit-label">in</span>
+                  </div>
+                </div>
+                <input id="size-range" type="range" min="0.5" max="3" step="0.05" value="1">
+                <div class="range-labels"><span id="size-min-label">0.5 in</span><span id="size-max-label">3 in</span></div>
+              </div>
+            </div>
+          </details>
+
+          <details class="control-section" open>
+            <summary>
+              <span><b>02</b> Background &amp; border</span>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+            </summary>
+            <div class="control-body">
+              <div class="color-row">
+                <label>Background
+                  <span class="color-control">
+                    <input id="token-fill" type="color" value="#f7c948">
+                    <input id="token-fill-text" type="text" value="#F7C948" maxlength="7" spellcheck="false" aria-label="Background color hex value">
+                  </span>
+                </label>
+                <label>Border
+                  <span class="color-control">
+                    <input id="token-stroke" type="color" value="#17223b">
+                    <input id="token-stroke-text" type="text" value="#17223B" maxlength="7" spellcheck="false" aria-label="Border color hex value">
+                  </span>
+                </label>
+              </div>
+              <label class="check-row">
+                <input id="transparent-fill" type="checkbox">
+                <span>Transparent background</span>
+              </label>
+              <div class="field-group compact">
+                <div class="field-heading"><label for="token-stroke-width">Border width</label><output id="token-stroke-output">4 px</output></div>
+                <input id="token-stroke-width" type="range" min="0" max="20" step="1" value="4">
+              </div>
+            </div>
+          </details>
+
+          <details class="control-section" open>
+            <summary>
+              <span><b>03</b> Icon</span>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+            </summary>
+            <div class="control-body">
+              <div class="selected-icon-row">
+                <span id="selected-icon-thumb" class="selected-icon-thumb"></span>
+                <div><b id="selected-icon-name">Heart</b><span id="selected-icon-source">Fractal Symbols · Combat</span></div>
+                <div class="selected-icon-actions">
+                  <button id="center-icon-btn" class="small-button" type="button">Center</button>
+                  <button id="reset-icon-values-btn" class="small-button reset-button" type="button">Reset icon</button>
+                </div>
+              </div>
+              <div class="color-row">
+                <label>Fill
+                  <span class="color-control">
+                    <input id="icon-fill" type="color" value="#17223b">
+                    <input id="icon-fill-text" type="text" value="#17223B" maxlength="7" spellcheck="false" aria-label="Icon fill color hex value">
+                  </span>
+                </label>
+                <label>Stroke
+                  <span class="color-control">
+                    <input id="icon-stroke" type="color" value="#17223b">
+                    <input id="icon-stroke-text" type="text" value="#17223B" maxlength="7" spellcheck="false" aria-label="Icon stroke color hex value">
+                  </span>
+                </label>
+              </div>
+              <div class="field-group compact">
+                <div class="field-heading"><label for="icon-scale">Scale</label><output id="icon-scale-output">100%</output></div>
+                <input id="icon-scale" type="range" min="25" max="150" step="1" value="100">
+              </div>
+              <div class="field-group compact">
+                <div class="field-heading"><label for="icon-rotation">Rotation</label><output id="icon-rotation-output">0°</output></div>
+                <input id="icon-rotation" type="range" min="-180" max="180" step="1" value="0">
+              </div>
+              <div class="field-group compact">
+                <div class="field-heading"><label for="icon-stroke-width">Stroke width</label><output id="icon-stroke-output">0 px</output></div>
+                <input id="icon-stroke-width" type="range" min="0" max="12" step="0.5" value="0">
+              </div>
+            </div>
+          </details>
+
+          <details class="control-section" open>
+            <summary>
+              <span><b>04</b> Numeric value</span>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m6 8 4 4 4-4"/></svg>
+            </summary>
+            <div class="control-body">
+              <div class="value-input-row">
+                <label for="value-text">Value</label>
+                <input id="value-text" type="text" inputmode="numeric" value="5" maxlength="5">
+                <button id="clear-value-btn" class="small-button" type="button">Clear</button>
+              </div>
+              <div class="segmented-control" role="group" aria-label="Value placement">
+                <button class="active" type="button" data-value-placement="center">Center</button>
+                <button type="button" data-value-placement="left">Left of icon</button>
+                <button type="button" data-value-placement="custom">Custom</button>
+              </div>
+              <label class="select-label">Treatment
+                <select id="value-mode">
+                  <option value="overlay">Overlay on icon</option>
+                  <option value="knockout">Cut out as negative space</option>
+                </select>
+              </label>
+              <div class="two-column-fields">
+                <label>Font
+                  <select id="value-font">
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="Georgia, serif">Georgia</option>
+                    <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+                    <option value="'Courier New', monospace">Courier</option>
+                  </select>
+                </label>
+                <label>Weight
+                  <select id="value-weight">
+                    <option value="700">Bold</option>
+                    <option value="900">Black</option>
+                    <option value="500">Medium</option>
+                    <option value="400">Regular</option>
+                  </select>
+                </label>
+              </div>
+              <div class="control-utility-row">
+                <span>Restore the default font, size, fill, and outline.</span>
+                <button id="reset-font-values-btn" class="small-button reset-button" type="button">Reset font</button>
+              </div>
+              <div class="field-group compact">
+                <div class="field-heading"><label for="value-size">Font size</label><output id="value-size-output">180 px</output></div>
+                <input id="value-size" type="range" min="60" max="360" step="5" value="180">
+              </div>
+              <div class="color-row">
+                <label>Fill
+                  <span class="color-control">
+                    <input id="value-fill" type="color" value="#ffffff">
+                    <input id="value-fill-text" type="text" value="#FFFFFF" maxlength="7" spellcheck="false" aria-label="Value fill color hex value">
+                  </span>
+                </label>
+                <label>Outline
+                  <span class="color-control">
+                    <input id="value-stroke" type="color" value="#17223b">
+                    <input id="value-stroke-text" type="text" value="#17223B" maxlength="7" spellcheck="false" aria-label="Value outline color hex value">
+                  </span>
+                </label>
+              </div>
+              <div class="field-group compact">
+                <div class="field-heading"><label for="value-stroke-width">Outline width</label><output id="value-stroke-output">6 px</output></div>
+                <input id="value-stroke-width" type="range" min="0" max="20" step="1" value="6">
+              </div>
+            </div>
+          </details>
+        </aside>
+      </div>
+    </section>
+
+    <section id="sheet-workspace" class="workspace" role="tabpanel" aria-labelledby="sheet-tab" hidden>
+      <div class="sheet-grid">
+        <aside class="panel sheet-settings-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="step-label">Sheet settings</p>
+              <h2>Prepare the page</h2>
+            </div>
+          </div>
+
+          <label class="select-label">Token set
+            <select id="sheet-spec-select"></select>
+            <small>One shape and physical size per sheet.</small>
+          </label>
+
+          <div class="two-column-fields">
+            <label>Paper
+              <select id="paper-size">
+                <option value="letter">US Letter</option>
+                <option value="a4">A4</option>
+              </select>
+            </label>
+            <label>Orientation
+              <select id="paper-orientation">
+                <option value="portrait">Portrait</option>
+                <option value="landscape">Landscape</option>
+              </select>
+              <small id="orientation-help" class="field-help" hidden>Landscape is required by the straight-cut hex template.</small>
+            </label>
+          </div>
+
+          <div class="sheet-measurement">
+            <label for="sheet-gutter">Gutter</label>
+            <div class="number-suffix">
+              <input id="sheet-gutter" type="number" min="0" max="1" step="0.01" value="0.3">
+              <span class="sheet-unit-label">in</span>
+            </div>
+          </div>
+          <label class="check-row emphasized">
+            <input id="touching-layout" type="checkbox">
+            <span><b>Touching layout</b><small id="touching-help">Sets the gutter to zero.</small></span>
+          </label>
+
+          <div class="sheet-measurement">
+            <label for="sheet-margin">Page margin</label>
+            <div class="number-suffix">
+              <input id="sheet-margin" type="number" min="0" max="1" step="0.05" value="0.25">
+              <span class="sheet-unit-label">in</span>
+            </div>
+          </div>
+          <label class="check-row emphasized">
+            <input id="add-bleed" type="checkbox" checked>
+            <span>
+              <b>Add 0.1 in bleed</b>
+              <small id="bleed-help">A 1 in finished token prints at 1.2 in. Cut or punch on the inner guide.</small>
+            </span>
+          </label>
+
+          <label class="select-label">Cutting guides
+            <select id="guide-style">
+              <option value="combined">Crosshairs + perimeter guides</option>
+              <option value="perimeter">Perimeter crop guides</option>
+              <option value="crosshairs">Internal corner crosshairs</option>
+              <option value="none">No guides</option>
+              <option value="hex-dashed" hidden>Dashed hex outlines</option>
+            </select>
+            <small id="guide-help">Combined guides provide both outside crop marks and internal registration points.</small>
+          </label>
+          <label class="check-row emphasized">
+            <input id="duplex-backs" type="checkbox">
+            <span>
+              <b>Include mirrored backs</b>
+              <small>Print long-edge in portrait or short-edge in landscape.</small>
+            </span>
+          </label>
+
+          <div class="sheet-summary-card">
+            <span id="capacity-number">0</span>
+            <div><b>tokens per page</b><small id="sheet-summary-copy">Add a design to begin.</small></div>
+          </div>
+        </aside>
+
+        <section class="panel sheet-preview-panel">
+          <div class="preview-heading">
+            <div>
+              <p class="step-label">Print preview</p>
+              <h2 id="page-heading">Page 1 of 1</h2>
+            </div>
+            <div class="preview-nav">
+              <button id="prev-page-btn" class="icon-button bordered" type="button" aria-label="Previous page">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
+              </button>
+              <button id="next-page-btn" class="icon-button bordered" type="button" aria-label="Next page">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <div id="sheet-quick-add" class="sheet-quick-add" hidden>
+            <div class="quick-add-heading">
+              <div>
+                <p class="step-label">Add token copies</p>
+                <h3>Mix designs on this sheet</h3>
+              </div>
+              <p id="quick-add-note">Use − and + to choose how many copies of each design to print.</p>
+            </div>
+            <div id="quick-add-list" class="quick-add-list"></div>
+          </div>
+
+          <div id="sheet-stage" class="sheet-stage">
+            <div id="paper-preview" class="paper-preview">
+              <div id="paper-tokens" class="paper-tokens"></div>
+              <svg id="paper-guides" class="paper-guides" aria-hidden="true"></svg>
+              <div class="paper-footer">TokenMaker · Fractal Symbols by Felix Thalin · fractalsymbols.com · CC BY 4.0</div>
+            </div>
+            <div id="empty-sheet-state" class="empty-sheet-state">
+              <span class="empty-sheet-icon">
+                <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="6" width="44" height="52" rx="4"/><circle cx="25" cy="25" r="7"/><path d="M16 47h32M34 18h12M34 25h12M16 37h32"/></svg>
+              </span>
+              <h3>Your sheet is ready for tokens</h3>
+              <p>Use the design controls above to add and mix token copies.</p>
+            </div>
+          </div>
+
+          <div class="sheet-actions">
+            <button id="export-pdf-btn" class="primary-button" type="button" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l4 4v16H6zM14 2v5h5M9 16h6M9 12h6"/></svg>
+              Export printable PDF
+            </button>
+            <button id="clear-sheet-btn" class="secondary-button" type="button">Clear sheet</button>
+            <span id="export-status" class="inline-status" aria-live="polite"></span>
+          </div>
+        </section>
+
+        <aside class="panel mix-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="step-label">Token mix</p>
+              <h2>Choose quantities</h2>
+            </div>
+            <span id="placed-count" class="count-pill">0 placed</span>
+          </div>
+          <p class="panel-intro">Add copies after designing. Drag placed tokens in the preview to swap their order.</p>
+          <div id="mix-list" class="mix-list"></div>
+          <div id="mix-empty" class="empty-message-box">
+            <p>Add at least one token design before building a sheet.</p>
+            <button id="return-designer-btn" class="secondary-button" type="button">Return to designer</button>
+          </div>
+          <div class="mix-footer">
+            <label>Fill remaining spaces with
+              <select id="fill-design-select"></select>
+            </label>
+            <button id="fill-page-btn" class="secondary-button wide" type="button" disabled>Fill current page</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>TokenMaker runs locally in your browser. Your artwork is never uploaded.</p>
+    <p>
+      Icons from <a href="https://fractalsymbols.com" target="_blank" rel="noreferrer">Fractal Symbols: Board Game Library</a>
+      by Felix Thalin, licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a>.
+    </p>
+    <p class="site-credit">
+      Copyright 2026 by
+      <a href="mailto:help@pnpfinder.com?subject=Feedback%20for%20TokenMaker">Martin Gonzalvez</a>.
+      If you find this site helpful,
+      <a href="https://ko-fi.com/marting" target="_blank" rel="noopener noreferrer">why not buy me a coffee?</a>
+    </p>
+  </footer>
+
+  <dialog id="license-dialog" class="license-dialog" aria-labelledby="license-title">
+    <div class="license-dialog-heading">
+      <div>
+        <p class="step-label">Icon artwork license</p>
+        <h2 id="license-title">Free to use with attribution</h2>
+      </div>
+      <button id="license-close-btn" class="icon-button bordered" type="button" aria-label="Close icon license information">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="license-assurance">
+      <span>CC BY 4.0</span>
+      <div>
+        <b>Use the included icons in prototypes or finished products.</b>
+        <p>You may copy, share, and adapt them for any purpose, including commercial projects, as long as you provide appropriate attribution.</p>
+      </div>
+    </div>
+    <div class="license-permissions" aria-label="License permissions">
+      <span><b>✓ Share</b> Copy and redistribute</span>
+      <span><b>✓ Adapt</b> Remix and transform</span>
+      <span><b>✓ Commercial</b> Use in products you sell</span>
+    </div>
+    <div class="attribution-example">
+      <b>Suggested attribution</b>
+      <p>Fractal Symbols: Board Game Library by Felix Thalin, licensed under CC BY 4.0.</p>
+    </div>
+    <p class="license-note">Attribution is required. The license does not imply endorsement and provides the artwork without warranties.</p>
+    <div class="license-dialog-actions">
+      <a class="secondary-button" href="https://fractalsymbols.com" target="_blank" rel="noreferrer">View icon source</a>
+      <a class="primary-button" href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">Read CC BY 4.0</a>
+    </div>
+  </dialog>
+
+  <div id="tutorial-layer" class="tutorial-layer" hidden>
+    <div id="tutorial-spotlight" class="tutorial-spotlight" aria-hidden="true"></div>
+    <section id="tutorial-callout" class="tutorial-callout" role="dialog" aria-modal="false" aria-labelledby="tutorial-title" aria-describedby="tutorial-copy">
+      <p id="tutorial-progress" class="tutorial-progress">Step 1 of 10</p>
+      <h2 id="tutorial-title">Welcome to TokenMaker</h2>
+      <p id="tutorial-copy"></p>
+      <div class="tutorial-actions">
+        <button id="tutorial-skip-btn" class="text-button" type="button">Skip tutorial</button>
+        <div>
+          <button id="tutorial-back-btn" class="secondary-button" type="button">Back</button>
+          <button id="tutorial-next-btn" class="primary-button" type="button">Next</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+    integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA=="
+    crossorigin="anonymous"
+    referrerpolicy="no-referrer"
+  ></script>
+  <script src="icon-manifest.js"></script>
+  <script src="layout-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
