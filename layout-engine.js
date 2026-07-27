@@ -26,6 +26,9 @@
     if (shape === "hexagon" || shape === "triangle") {
       return { width: size, height: size * SQRT3 / 2 };
     }
+    if (shape === "octagon") {
+      return { width: size, height: size };
+    }
     return { width: size, height: size };
   }
 
@@ -146,7 +149,7 @@
     const marginIn = clamp(options.marginIn ?? 0.25, 0, 1);
     const footerIn = clamp(options.footerIn ?? 0.28, 0, 0.75);
     const config = {
-      shape: ["circle", "square", "hexagon", "triangle"].includes(options.shape)
+      shape: ["circle", "square", "hexagon", "octagon", "triangle"].includes(options.shape)
         ? options.shape
         : "circle",
       sizeIn: clamp(options.sizeIn ?? 1, 0.5, 3),

@@ -9,7 +9,7 @@ TokenMaker is a static, framework-free GitHub Pages application. It has no build
 1. Physical dimensions are stored internally in inches. Metric values are display/input conversions only.
 2. A sheet spec is the combination `shape|sizeIn`. Placements from different specs must never be mixed.
 3. Preview and export must use `layout-engine.js`; do not duplicate packing math in `app.js`.
-4. Token SVGs use a 1000 × 1000 design viewBox. Hexagon physical height is `size × √3 / 2`. Dormant triangle geometry is retained in the layout engine but is not exposed in the UI.
+4. Token SVGs use a 1000 × 1000 design viewBox. Hexagon physical height is `size × √3 / 2`. Octagon and other rectangular-bounding shapes use `size × size`. Dormant triangle geometry is retained in the layout engine but is not exposed in the UI.
 5. The PDF renderer uses 300 pixels per inch and places the final page image at exact physical dimensions.
 6. Uploaded SVG content must pass through `normalizeSvgSource()` before it is inserted into the document.
 7. Uploaded raster artwork and SVG source text must remain serializable in project JSON.

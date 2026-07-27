@@ -346,7 +346,7 @@
   }
 
   function shapeLabel(shape) {
-    return { circle: "Circle", square: "Square", hexagon: "Hexagon", triangle: "Triangle" }[shape] || "Circle";
+    return { circle: "Circle", square: "Square", hexagon: "Hexagon", octagon: "Octagon", triangle: "Triangle" }[shape] || "Circle";
   }
 
   function setDirty(isDirty = true) {
@@ -542,6 +542,11 @@
         element: '<path class="token-shape" d="M0 500 250 66.9873h500L1000 500 750 933.0127H250Z"/>',
         path: "M0 500 250 66.9873h500L1000 500 750 933.0127H250Z",
         points: [[0, 500], [250, 66.9873], [750, 66.9873], [1000, 500], [750, 933.0127], [250, 933.0127]],
+      },
+      octagon: {
+        element: '<path class="token-shape" d="M292.893 0H707.107L1000 292.893V707.107L707.107 1000H292.893L0 707.107V292.893Z"/>',
+        path: "M292.893 0H707.107L1000 292.893V707.107L707.107 1000H292.893L0 707.107V292.893Z",
+        points: [[292.893, 0], [707.107, 0], [1000, 292.893], [1000, 707.107], [707.107, 1000], [292.893, 1000], [0, 707.107], [0, 292.893]],
       },
       triangle: {
         element: '<path class="token-shape" d="M500 66.9873 1000 933.0127H0Z"/>',
@@ -1858,7 +1863,7 @@
     const design = { ...base, ...raw };
     design.id = typeof raw.id === "string" ? raw.id : uid("design");
     design.name = String(raw.name || "Untitled token").slice(0, 60);
-    design.shape = ["circle", "square", "hexagon"].includes(raw.shape) ? raw.shape : "circle";
+    design.shape = ["circle", "square", "hexagon", "octagon"].includes(raw.shape) ? raw.shape : "circle";
     design.sizeIn = clamp(raw.sizeIn, 0.5, 3);
     design.icon = raw.icon && typeof raw.icon === "object" ? raw.icon : makeLibraryIcon();
     return design;
