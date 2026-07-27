@@ -32,7 +32,7 @@ TokenMaker is an MVP ready for functional validation and iterative polishing. It
 - Zero-gutter touching layout for octagon sheets
 - Default-on 0.1-inch bleed on every side
 - Combined perimeter and crosshair guides by default for circles and squares
-- Automatic 1.5 pt, 50%-opacity dashed cut outlines for hexagons
+- Straight-cut hexagon layout with no cutting guides; grid layout with standard guides
 - Optional horizontally mirrored back pages for duplex printing
 - Individual PNG and JPG exports at 300 DPI
 - Multipage PDF export at 300 DPI

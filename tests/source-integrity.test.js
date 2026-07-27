@@ -72,8 +72,8 @@ test("cutting guide controls use combined guides and automatic hex outlines", ()
   assert.match(html, /option value="hex-dashed"/);
   assert.doesNotMatch(html, /option value="solid"/);
   assert.doesNotMatch(html, /option value="dashed"/);
-  assert.match(app, /stroke-opacity="0\.5"/);
-  assert.match(app, /stroke-width="2" stroke-dasharray="14 10"/);
+  assert.match(app, /stroke-opacity="0\.8"/);
+  assert.match(app, /stroke-width="3" stroke-dasharray="14 10"/);
   assert.match(app, /context\.globalAlpha = 0\.5/);
   assert.match(app, /1\.5 \/ 72 \* dpi/);
   assert.match(app, /suppressTokenStroke: design\.shape === "hexagon"/);

@@ -116,6 +116,8 @@
     touchingHelp: $("#touching-help"),
     guideStyle: $("#guide-style"),
     guideHelp: $("#guide-help"),
+    hexLayoutToggleRow: $("#hex-layout-toggle-row"),
+    hexLayoutToggle: $("#hex-layout-toggle"),
     duplexBacks: $("#duplex-backs"),
     capacityNumber: $("#capacity-number"),
     sheetSummaryCopy: $("#sheet-summary-copy"),
@@ -707,7 +709,7 @@
   function guideMarkup(shape, style) {
     if (shape !== "hexagon" || style !== "hex-dashed") return "";
     const geometry = shapeGeometry(shape);
-    return `<path d="${geometry.path}" fill="none" stroke="#000000" stroke-opacity="0.5" stroke-width="2" stroke-dasharray="14 10" vector-effect="non-scaling-stroke"/>`;
+    return `<path d="${geometry.path}" fill="none" stroke="#ff0000" stroke-opacity="0.8" stroke-width="3" stroke-dasharray="14 10" vector-effect="non-scaling-stroke"/>`;
   }
 
   async function renderTokenSvg(design, options = {}) {
@@ -1188,20 +1190,23 @@
   }
 
   function getEffectiveGuideStyle(shape = parseSpecKey(state.sheet.specKey || "circle|1").shape) {
-    return shape === "hexagon" ? "hex-dashed" : state.sheet.guideStyle;
+    return state.sheet.guideStyle;
   }
 
   function getSheetLayout() {
     const spec = parseSpecKey(state.sheet.specKey || "circle|1");
+    const isHex = spec.shape === "hexagon";
+    const isStraightCut = isHex && state.sheet.hexLayoutMode === "straight-cut";
     return layoutApi.calculateSheetLayout({
       paperSize: state.sheet.paperSize,
-      orientation: spec.shape === "hexagon" ? "landscape" : state.sheet.orientation,
+      orientation: isStraightCut ? "landscape" : state.sheet.orientation,
       shape: spec.shape,
       sizeIn: spec.sizeIn,
-      gutterIn: spec.shape === "hexagon" ? 0 : state.sheet.gutterIn,
-      marginIn: state.sheet.marginIn,
+      gutterIn: isStraightCut ? 0 : state.sheet.gutterIn,
       bleedIn: state.sheet.bleedIn,
+      marginIn: state.sheet.marginIn,
       footerIn: 0.28,
+      layoutMode: isStraightCut ? "straight-cut" : undefined,
     });
   }
 
@@ -1321,6 +1326,12 @@
 
   function renderPaperGuides(layout, side = "front") {
     els.paperGuides.setAttribute("viewBox", `0 0 ${layout.paper.width} ${layout.paper.height}`);
+    const isHexStraightCut = layout.config.shape === "hexagon"
+      && state.sheet.hexLayoutMode === "straight-cut";
+    if (isHexStraightCut) {
+      els.paperGuides.replaceChildren();
+      return;
+    }
     const guideSlots = getGuideSlotsForSide(layout, side);
     const segments = layoutApi.getSheetGuideSegments(
       guideSlots,
@@ -1367,7 +1378,9 @@
         ? `${placements.length} placed across ${contentPages.length} ${contentPages.length === 1 ? "sheet" : "sheets"} · ${printablePages.length} PDF pages.`
         : `${placements.length} placed across ${contentPages.length} ${contentPages.length === 1 ? "page" : "pages"}.`
       : layout.config.shape === "hexagon"
-        ? `Straight-cut template · ${displayMeasurement(layout.config.sizeIn)}`
+        ? state.sheet.hexLayoutMode === "straight-cut"
+          ? `Straight-cut template · ${displayMeasurement(layout.config.sizeIn)}`
+          : `Grid layout · ${displayMeasurement(layout.config.sizeIn)}`
         : `${shapeLabel(layout.config.shape)} · ${displayMeasurement(layout.config.sizeIn)}`;
     els.placedCount.textContent = `${placements.length} placed`;
     els.sheetTabCount.textContent = `${placements.length} placed`;
@@ -1439,26 +1452,23 @@
   function refreshSheetControls() {
     const spec = parseSpecKey(state.sheet.specKey || "circle|1");
     const isHexSheet = spec.shape === "hexagon";
-    if (isHexSheet) {
+    const isStraightCut = isHexSheet && state.sheet.hexLayoutMode === "straight-cut";
+    if (isStraightCut) {
       state.sheet.gutterIn = 0;
       state.sheet.orientation = "landscape";
     }
     els.paperSize.value = state.sheet.paperSize;
     els.paperOrientation.value = state.sheet.orientation;
-    els.paperOrientation.disabled = isHexSheet;
+    els.paperOrientation.disabled = isStraightCut;
     els.orientationHelp.hidden = !isHexSheet;
-    els.guideStyle.querySelector('[value="hex-dashed"]').hidden = !isHexSheet;
     els.guideStyle.value = getEffectiveGuideStyle(spec.shape);
-    els.guideStyle.disabled = isHexSheet;
-    els.guideHelp.textContent = isHexSheet
-      ? "Hex sheets replace solid token borders with 1.5 pt dashed cut outlines at 50% opacity."
-      : state.sheet.guideStyle === "combined"
-        ? "Combined guides provide both outside crop marks and internal registration points."
-        : state.sheet.guideStyle === "perimeter"
-          ? "Crop marks appear around the outside edge of the full token grid."
-          : state.sheet.guideStyle === "crosshairs"
-            ? "Registration crosshairs appear at the corners of every token cut box."
-            : "No cutting guides will be added.";
+    els.guideHelp.textContent = state.sheet.guideStyle === "combined"
+      ? "Combined guides provide both outside crop marks and internal registration points."
+      : state.sheet.guideStyle === "perimeter"
+        ? "Crop marks appear around the outside edge of the full token grid."
+        : state.sheet.guideStyle === "crosshairs"
+          ? "Registration crosshairs appear at the corners of every token cut box."
+          : "No cutting guides will be added.";
     els.duplexBacks.checked = state.sheet.includeBacks;
     els.addBleed.checked = state.sheet.bleedIn > 0;
     const finishedSize = spec.sizeIn;
@@ -1476,12 +1486,18 @@
     }
     els.sheetGutter.value = formatNumber(gutterDisplay, state.unit === "mm" ? 1 : 2);
     els.sheetMargin.value = formatNumber(marginDisplay, state.unit === "mm" ? 1 : 2);
-    els.touchingLayout.checked = isHexSheet || state.sheet.gutterIn === 0;
-    els.touchingLayout.disabled = isHexSheet;
-    els.sheetGutter.disabled = isHexSheet || state.sheet.gutterIn === 0;
-    els.touchingHelp.textContent = isHexSheet
+    els.touchingLayout.checked = state.sheet.gutterIn === 0;
+    els.touchingLayout.disabled = isStraightCut;
+    els.sheetGutter.disabled = isStraightCut || state.sheet.gutterIn === 0;
+    els.touchingHelp.textContent = isStraightCut
       ? "Required for the straight-cut hex template."
       : "Sets the gutter to zero.";
+    if (els.hexLayoutToggleRow) {
+      els.hexLayoutToggleRow.hidden = !isHexSheet;
+    }
+    if (els.hexLayoutToggle) {
+      els.hexLayoutToggle.checked = isStraightCut;
+    }
     $$(".sheet-unit-label").forEach((node) => {
       node.textContent = state.unit;
     });
@@ -1889,6 +1905,7 @@
         guideStyle: "combined",
         includeBacks: false,
         currentPage: 0,
+        hexLayoutMode: "straight-cut",
         placementsBySpec: {},
         ...(project.sheet || {}),
       };
@@ -2085,7 +2102,6 @@
       refreshSheet();
     });
     els.paperOrientation.addEventListener("change", () => {
-      if (parseSpecKey(state.sheet.specKey).shape === "hexagon") return;
       state.sheet.orientation = els.paperOrientation.value;
       state.sheet.currentPage = 0;
       setDirty();
@@ -2109,7 +2125,6 @@
       refreshSheet();
     });
     els.sheetGutter.addEventListener("change", () => {
-      if (parseSpecKey(state.sheet.specKey).shape === "hexagon") return;
       state.sheet.gutterIn = clamp(layoutApi.unitToInches(els.sheetGutter.value, state.unit), 0, 1);
       state.sheet.currentPage = 0;
       setDirty();
@@ -2122,12 +2137,19 @@
       refreshSheet();
     });
     els.touchingLayout.addEventListener("change", () => {
-      if (parseSpecKey(state.sheet.specKey).shape === "hexagon") return;
       state.sheet.gutterIn = els.touchingLayout.checked ? 0 : 0.3;
       state.sheet.currentPage = 0;
       setDirty();
       refreshSheet();
     });
+    if (els.hexLayoutToggle) {
+      els.hexLayoutToggle.addEventListener("change", () => {
+        state.sheet.hexLayoutMode = els.hexLayoutToggle.checked ? "straight-cut" : "grid";
+        state.sheet.currentPage = 0;
+        setDirty();
+        refreshSheet();
+      });
+    }
     els.prevPageBtn.addEventListener("click", () => {
       state.sheet.currentPage -= 1;
       refreshSheetPreview();

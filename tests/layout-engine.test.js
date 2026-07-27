@@ -219,11 +219,45 @@ test("the supplied 1.5-inch Letter template pattern yields alternating 6/7 rows"
     gutterIn: 0,
     marginIn: 0.25,
     footerIn: 0.28,
+    layoutMode: "straight-cut",
   });
   const rowCounts = [];
   for (const slot of layout.slots) rowCounts[slot.row] = (rowCounts[slot.row] || 0) + 1;
   assert.deepEqual(rowCounts, [6, 7, 6, 7, 6]);
   assert.equal(layout.capacity, 32);
+});
+
+test("hex grid layout uses rectangular grid with user-controlled gutter", () => {
+  const layout = calculateSheetLayout({
+    paperSize: "letter",
+    orientation: "portrait",
+    shape: "hexagon",
+    sizeIn: 1,
+    gutterIn: 0.3,
+    marginIn: 0.25,
+    footerIn: 0.28,
+    layoutMode: "grid",
+  });
+  assert.ok(layout.capacity > 0);
+  for (const slot of layout.slots) {
+    assert.ok(slot.x >= layout.usable.x - 1e-8);
+    assert.ok(slot.y >= layout.usable.y - 1e-8);
+    assert.ok(slot.x + slot.width <= layout.usable.x + layout.usable.width + 1e-8);
+    assert.ok(slot.y + slot.height <= layout.usable.y + layout.usable.height + 1e-8);
+  }
+  const rowGroups = {};
+  for (const slot of layout.slots) {
+    const row = slot.row;
+    if (!rowGroups[row]) rowGroups[row] = [];
+    rowGroups[row].push(slot);
+  }
+  const rows = Object.keys(rowGroups).map(Number).sort((a, b) => a - b);
+  for (const row of rows) {
+    const rowSlots = rowGroups[row];
+    for (let i = 1; i < rowSlots.length; i++) {
+      assert.equal(Number(rowSlots[i].y.toFixed(6)), Number(rowSlots[i - 1].y.toFixed(6)));
+    }
+  }
 });
 
 test("pagination preserves order and assigns valid slots", () => {
@@ -243,7 +277,7 @@ test("pagination preserves order and assigns valid slots", () => {
 test("all supported layout combinations stay inside the printable area", () => {
   for (const paperSize of ["letter", "a4"]) {
     for (const orientation of ["portrait", "landscape"]) {
-      for (const shape of ["circle", "square", "hexagon", "triangle"]) {
+      for (const shape of ["circle", "square", "hexagon", "octagon", "triangle"]) {
         for (const sizeIn of [0.5, 1, 1.75, 3]) {
           for (const gutterIn of [0, 0.125, 0.4]) {
             for (const bleedIn of [0, 0.1]) {

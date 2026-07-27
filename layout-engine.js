@@ -144,6 +144,36 @@
     return slots;
   }
 
+  function hexGridSlots(config, usable) {
+    const bounds = getPrintedTokenBounds("hexagon", config.sizeIn, config.bleedIn);
+    const gap = config.gutterIn;
+    const pitchX = bounds.width + gap;
+    const pitchY = bounds.height + gap;
+    const cols = Math.max(0, Math.floor((usable.width + gap + 1e-8) / pitchX));
+    const rows = Math.max(0, Math.floor((usable.height + gap + 1e-8) / pitchY));
+    const usedW = cols ? cols * bounds.width + Math.max(0, cols - 1) * gap : 0;
+    const usedH = rows ? rows * bounds.height + Math.max(0, rows - 1) * gap : 0;
+    const startX = usable.x + Math.max(0, (usable.width - usedW) / 2);
+    const startY = usable.y + Math.max(0, (usable.height - usedH) / 2);
+    const slots = [];
+
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < cols; col += 1) {
+        slots.push({
+          x: startX + col * pitchX,
+          y: startY + row * pitchY,
+          width: bounds.width,
+          height: bounds.height,
+          rotation: 0,
+          row,
+          col,
+        });
+      }
+    }
+
+    return slots;
+  }
+
   function calculateSheetLayout(options = {}) {
     const paper = getPaperDimensions(options.paperSize, options.orientation);
     const marginIn = clamp(options.marginIn ?? 0.25, 0, 1);
@@ -164,7 +194,10 @@
     };
 
     let slots;
-    if (config.shape === "hexagon") slots = hexSlots(config, usable, paper.height);
+    if (config.shape === "hexagon") {
+      const layoutMode = options.layoutMode || "straight-cut";
+      slots = layoutMode === "straight-cut" ? hexSlots(config, usable, paper.height) : hexGridSlots(config, usable);
+    }
     else if (config.shape === "triangle") slots = triangleSlots(config, usable);
     else slots = rectSlots(config, usable);
 

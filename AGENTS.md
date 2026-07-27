@@ -14,7 +14,7 @@ TokenMaker is a static, framework-free GitHub Pages application. It has no build
 6. Uploaded SVG content must pass through `normalizeSvgSource()` before it is inserted into the document.
 7. Uploaded raster artwork and SVG source text must remain serializable in project JSON.
 8. Keep the Fractal Symbols attribution in the site footer and printable PDF footer.
-9. Hex sheets always use a zero gutter and landscape orientation. Their alternating full-height rows form the continuous three-direction straight-cut lattice from the supplied template.
+9. Hex sheets support two layout modes: "straight-cut" (alternating rows, zero gutter, landscape forced, no cutting guides) and "grid" (rectangular grid, user-controlled gutter/orientation, standard cutting guides). The toggle defaults to straight-cut for backward compatibility and is only visible for hexagon sheets.
 
 ## Project State
 
@@ -32,12 +32,15 @@ TokenMaker is a static, framework-free GitHub Pages application. It has no build
     guideStyle,
     includeBacks,
     currentPage,
-    placementsBySpec
+    placementsBySpec,
+    hexLayoutMode: "straight-cut" | "grid"
   }
 }
 ```
 
 `placementsBySpec` maps a sheet spec to an ordered array of design IDs. Quantities are derived from repeated IDs rather than stored separately.
+
+`hexLayoutMode` is only active when `specKey` starts with `hex|`. It controls the packing algorithm used by `calculateSheetLayout()` — straight-cut uses `hexStraightCutSlots()` while grid uses `hexGridSlots()` (or `rectGridSlots()` for non-hex shapes).
 
 ## Icon Library
 
@@ -61,3 +64,11 @@ node --test tests/*.test.js
 ```
 
 The layout property test checks every supported shape across representative sizes, gutters, paper sizes, and orientations.
+
+## Key Files
+
+- `index.html` — UI for designer, sheet builder, hex layout toggle, octagon shape button
+- `app.js` — Main app logic: `shapeGeometry()`, `hexLayoutMode` state, `refreshSheetControls()`, `guideMarkup()` (hex-dashed styling)
+- `layout-engine.js` — Layout algorithms: `hexGridSlots()`, `calculateSheetLayout()` (layoutMode routing)
+- `tests/layout-engine.test.js` — Hex grid layout test, octagon in shapes array
+- `tests/source-integrity.test.js` — Source assertions for hex-dashed guide styling
