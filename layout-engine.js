@@ -203,8 +203,8 @@
     let slots;
     if (config.shape === "hexagon") {
       const layoutMode = options.layoutMode || "straight-cut";
-      const orientation = options.orientation || "flat-top";
-      slots = layoutMode === "straight-cut" ? hexSlots(config, usable, paper.height, orientation) : hexGridSlots(config, usable, orientation);
+      const hexOrientation = options.hexOrientation || "flat-top";
+      slots = layoutMode === "straight-cut" ? hexSlots(config, usable, paper.height, hexOrientation) : hexGridSlots(config, usable, hexOrientation);
     }
     else if (config.shape === "triangle") slots = triangleSlots(config, usable);
     else slots = rectSlots(config, usable);

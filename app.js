@@ -1231,7 +1231,7 @@
       marginIn: state.sheet.marginIn,
       footerIn: 0.28,
       layoutMode: isStraightCut ? "straight-cut" : undefined,
-      orientation: state.sheet.hexOrientation,
+      hexOrientation: state.sheet.hexOrientation,
     });
   }
 
