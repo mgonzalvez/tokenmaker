@@ -12,7 +12,7 @@ TokenMaker is an MVP ready for functional validation and iterative polishing. It
 
 ## Features
 
-- Circle, square, flat-top hexagon, and flat-top octagon tokens
+- Circle, square, flat-top hexagon, pointy-top hexagon, and flat-top octagon tokens
 - Finished sizes from 0.5 to 3 inches
 - Imperial and metric controls
 - Live SVG preview with direct icon and value positioning
@@ -33,6 +33,7 @@ TokenMaker is an MVP ready for functional validation and iterative polishing. It
 - Default-on 0.1-inch bleed on every side
 - Combined perimeter and crosshair guides by default for circles and squares
 - Straight-cut hexagon layout with no cutting guides; grid layout with standard guides
+- Pointy-top hexagon orientation (rotate hexagons so a vertex faces up instead of a flat side); straight-cut layout is disabled when pointy-top is active
 - Optional horizontally mirrored back pages for duplex printing
 - Individual PNG and JPG exports at 300 DPI
 - Multipage PDF export at 300 DPI
@@ -81,7 +82,7 @@ The tests cover:
 
 - physical unit conversion and supported size limits;
 - bleed, gutter, margin, paper, and pagination calculations;
-- circle, square, octagon, and straight-cut hexagon placement;
+- circle, square, octagon, straight-cut hexagon, and pointy-top hexagon placement;
 - mirrored duplex page geometry;
 - cutting-guide generation;
 - DOM/source integrity and GitHub Pages configuration;
