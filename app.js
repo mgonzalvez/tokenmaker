@@ -118,6 +118,10 @@
     guideHelp: $("#guide-help"),
     hexLayoutToggleRow: $("#hex-layout-toggle-row"),
     hexLayoutToggle: $("#hex-layout-toggle"),
+    hexOrientationRow: $("#hex-orientation-row"),
+    hexOrientationRowDesign: $("#hex-orientation-row-design"),
+    hexOrientationToggle: $("#hex-orientation-toggle"),
+    hexOrientationToggleDesign: $("#hex-orientation-toggle-design"),
     duplexBacks: $("#duplex-backs"),
     capacityNumber: $("#capacity-number"),
     sheetSummaryCopy: $("#sheet-summary-copy"),
@@ -279,9 +283,10 @@
       bleedIn: 0.1,
       guideStyle: "combined",
       includeBacks: false,
-      currentPage: 0,
-      placementsBySpec: {},
-    },
+        currentPage: 0,
+        placementsBySpec: {},
+        hexOrientation: "flat-top",
+      },
     dragTarget: "icon",
     dirty: false,
   };
@@ -528,7 +533,7 @@
     if (!seen) setTimeout(startTutorial, 500);
   }
 
-  function shapeGeometry(shape) {
+  function shapeGeometry(shape, orientation = "flat-top") {
     const geometries = {
       circle: {
         element: '<circle class="token-shape" cx="500" cy="500" r="495"/>',
@@ -541,9 +546,15 @@
         points: [[5, 5], [995, 5], [995, 995], [5, 995]],
       },
       hexagon: {
-        element: '<path class="token-shape" d="M0 500 250 66.9873h500L1000 500 750 933.0127H250Z"/>',
-        path: "M0 500 250 66.9873h500L1000 500 750 933.0127H250Z",
-        points: [[0, 500], [250, 66.9873], [750, 66.9873], [1000, 500], [750, 933.0127], [250, 933.0127]],
+        element: orientation === "pointy-top"
+          ? '<path class="token-shape" d="M500 0L933.0127 250V750L500 1000L66.9873 750V250Z"/>'
+          : '<path class="token-shape" d="M0 500 250 66.9873h500L1000 500 750 933.0127H250Z"/>',
+        path: orientation === "pointy-top"
+          ? "M500 0L933.0127 250V750L500 1000L66.9873 750V250Z"
+          : "M0 500 250 66.9873h500L1000 500 750 933.0127H250Z",
+        points: orientation === "pointy-top"
+          ? [[500, 0], [933.0127, 250], [933.0127, 750], [500, 1000], [66.9873, 750], [66.9873, 250]]
+          : [[0, 500], [250, 66.9873], [750, 66.9873], [1000, 500], [750, 933.0127], [250, 933.0127]],
       },
       octagon: {
         element: '<path class="token-shape" d="M292.893 0H707.107L1000 292.893V707.107L707.107 1000H292.893L0 707.107V292.893Z"/>',
@@ -714,7 +725,7 @@
 
   async function renderTokenSvg(design, options = {}) {
     const id = `tm-${++renderCounter}`;
-    const geometry = shapeGeometry(design.shape);
+    const geometry = shapeGeometry(design.shape, options.orientation);
     const fill = design.tokenFillTransparent ? "none" : safeHex(design.tokenFill, "#f7c948");
     const stroke = safeHex(design.tokenStroke, "#17223b");
     const strokeWidth = clamp(design.tokenStrokeWidth, 0, 20) * 2.5;
@@ -763,7 +774,7 @@
   async function renderPreview() {
     const token = ++previewRenderToken;
     try {
-      const markup = await renderTokenSvg(state.draft);
+      const markup = await renderTokenSvg(state.draft, { orientation: state.sheet.hexOrientation });
       if (token !== previewRenderToken) return;
       const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
       const sourceRoot = doc.documentElement;
@@ -865,6 +876,19 @@
       : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Add to project';
     updateDraftDimensions();
     updateSelectedIconUi();
+    const isHexDraft = draft.shape === "hexagon";
+    if (els.hexOrientationRow) {
+      els.hexOrientationRow.hidden = !isHexDraft;
+    }
+    if (els.hexOrientationRowDesign) {
+      els.hexOrientationRowDesign.hidden = !isHexDraft;
+    }
+    if (els.hexOrientationToggle) {
+      els.hexOrientationToggle.checked = state.sheet.hexOrientation === "pointy-top";
+    }
+    if (els.hexOrientationToggleDesign) {
+      els.hexOrientationToggleDesign.checked = state.sheet.hexOrientation === "pointy-top";
+    }
     renderPreview();
   }
 
@@ -1142,7 +1166,7 @@
       card.querySelector('[data-card-action="delete"]').addEventListener("click", () => deleteDesign(design.id));
       els.designStrip.append(card);
       try {
-        const markup = await renderTokenSvg(design);
+        const markup = await renderTokenSvg(design, { orientation: state.sheet.hexOrientation });
         if (renderToken !== designStripRenderToken) return;
         $(".design-thumb", card).innerHTML = markup;
       } catch {}
@@ -1207,6 +1231,7 @@
       marginIn: state.sheet.marginIn,
       footerIn: 0.28,
       layoutMode: isStraightCut ? "straight-cut" : undefined,
+      orientation: state.sheet.hexOrientation,
     });
   }
 
@@ -1263,8 +1288,8 @@
       els.fillDesignSelect.append(option);
       try {
         const [markup, quickMarkup] = await Promise.all([
-          renderTokenSvg(design),
-          renderTokenSvg(design),
+          renderTokenSvg(design, { orientation: state.sheet.hexOrientation }),
+          renderTokenSvg(design, { orientation: state.sheet.hexOrientation }),
         ]);
         if (renderToken !== mixRenderToken) return;
         $(".mix-item-thumb", item).innerHTML = markup;
@@ -1401,7 +1426,7 @@
       const design = state.designs.find((item) => item.id === placement.designId);
       if (!design) continue;
       const printSize = design.sizeIn + state.sheet.bleedIn * 2;
-      const bounds = layoutApi.getPrintedTokenBounds(design.shape, design.sizeIn, state.sheet.bleedIn);
+      const bounds = layoutApi.getPrintedTokenBounds(design.shape, design.sizeIn, state.sheet.bleedIn, state.sheet.hexOrientation);
       const transparentPad = (printSize - bounds.height) / 2;
       const element = document.createElement("div");
       element.className = "paper-token";
@@ -1442,6 +1467,7 @@
         const markup = await renderTokenSvg(design, {
           guideStyle: getEffectiveGuideStyle(design.shape),
           bleedIn: state.sheet.bleedIn,
+          orientation: state.sheet.hexOrientation,
         });
         if (token !== sheetRenderToken) return;
         element.innerHTML = markup;
@@ -1453,6 +1479,7 @@
     const spec = parseSpecKey(state.sheet.specKey || "circle|1");
     const isHexSheet = spec.shape === "hexagon";
     const isStraightCut = isHexSheet && state.sheet.hexLayoutMode === "straight-cut";
+    const isPointyTop = isHexSheet && state.sheet.hexOrientation === "pointy-top";
     if (isStraightCut) {
       state.sheet.gutterIn = 0;
       state.sheet.orientation = "landscape";
@@ -1497,6 +1524,24 @@
     }
     if (els.hexLayoutToggle) {
       els.hexLayoutToggle.checked = isStraightCut;
+    }
+    if (els.hexOrientationRow) {
+      els.hexOrientationRow.hidden = !isHexSheet;
+    }
+    if (els.hexOrientationRowDesign) {
+      els.hexOrientationRowDesign.hidden = !isHexSheet;
+    }
+    if (els.hexOrientationToggle) {
+      els.hexOrientationToggle.checked = isPointyTop;
+    }
+    if (els.hexOrientationToggleDesign) {
+      els.hexOrientationToggleDesign.checked = isPointyTop;
+    }
+    els.hexLayoutToggle.disabled = isPointyTop;
+    if (els.hexLayoutToggle) {
+      els.hexLayoutToggle.nextElementSibling.querySelector("small").textContent = isPointyTop
+        ? "Straight-cut is not compatible with pointy-top orientation."
+        : "Alternating rows create continuous cut lines for straight line cutting.";
     }
     $$(".sheet-unit-label").forEach((node) => {
       node.textContent = state.unit;
@@ -1668,14 +1713,24 @@
     } else if (shape === "square") {
       context.rect(x, y, width, height);
     } else if (shape === "hexagon") {
-      const points = [
-        [x, y + height / 2],
-        [x + width / 4, y],
-        [x + width * 3 / 4, y],
-        [x + width, y + height / 2],
-        [x + width * 3 / 4, y + height],
-        [x + width / 4, y + height],
-      ];
+      const isPointyTop = options?.orientation === "pointy-top";
+      const points = isPointyTop
+        ? [
+            [x + width / 2, y],
+            [x + width, y + height / 4],
+            [x + width, y + height * 3 / 4],
+            [x + width / 2, y + height],
+            [x, y + height * 3 / 4],
+            [x, y + height / 4],
+          ]
+        : [
+            [x, y + height / 2],
+            [x + width / 4, y],
+            [x + width * 3 / 4, y],
+            [x + width, y + height / 2],
+            [x + width * 3 / 4, y + height],
+            [x + width / 4, y + height],
+          ];
       points.forEach(([px, py], index) => (index ? context.lineTo(px, py) : context.moveTo(px, py)));
       context.closePath();
     } else {
@@ -1686,7 +1741,7 @@
     }
   }
 
-  function drawCutGuide(context, placement, shape, style, dpi) {
+  function drawCutGuide(context, placement, shape, style, dpi, orientation = "flat-top") {
     if (style !== "hex-dashed" || shape !== "hexagon") return;
     const centerX = (placement.x + placement.width / 2) * dpi;
     const centerY = (placement.y + placement.height / 2) * dpi;
@@ -1703,7 +1758,7 @@
     context.lineCap = "butt";
     context.lineJoin = "miter";
     context.setLineDash([0.07 * dpi, 0.045 * dpi]);
-    traceGuideShape(context, shape, x, y, width, height);
+    traceGuideShape(context, shape, x, y, width, height, { orientation });
     context.stroke();
     context.restore();
   }
@@ -1793,13 +1848,14 @@
               null,
               {
                 bleedIn: state.sheet.bleedIn,
-                suppressTokenStroke: design.shape === "hexagon",
+                suppressTokenStroke: design.shape === "hexagon" && getEffectiveGuideStyle(design.shape) === "hex-dashed",
+                orientation: state.sheet.hexOrientation,
               },
             );
             canvasCache.set(design.id, tokenCanvas);
           }
           const printSize = design.sizeIn + state.sheet.bleedIn * 2;
-          const bounds = layoutApi.getPrintedTokenBounds(design.shape, design.sizeIn, state.sheet.bleedIn);
+          const bounds = layoutApi.getPrintedTokenBounds(design.shape, design.sizeIn, state.sheet.bleedIn, state.sheet.hexOrientation);
           const padIn = (printSize - bounds.height) / 2;
           const drawX = placement.x * EXPORT_DPI;
           const drawY = (placement.y - padIn) * EXPORT_DPI;
@@ -1809,7 +1865,7 @@
           context.rotate((placement.rotation || 0) * Math.PI / 180);
           context.drawImage(tokenCanvas, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
           context.restore();
-          const finishedBounds = layoutApi.getTokenBounds(design.shape, design.sizeIn);
+          const finishedBounds = layoutApi.getTokenBounds(design.shape, design.sizeIn, state.sheet.hexOrientation);
           const cutPlacement = {
             ...placement,
             x: placement.x + (placement.width - finishedBounds.width) / 2,
@@ -1823,6 +1879,7 @@
             design.shape,
             getEffectiveGuideStyle(design.shape),
             EXPORT_DPI,
+            state.sheet.hexOrientation,
           );
         }
         drawSheetGuides(context, layout, printablePage.side, EXPORT_DPI);
@@ -1906,6 +1963,7 @@
         includeBacks: false,
         currentPage: 0,
         hexLayoutMode: "straight-cut",
+        hexOrientation: "flat-top",
         placementsBySpec: {},
         ...(project.sheet || {}),
       };
@@ -2019,6 +2077,7 @@
         state.draft.shape = button.dataset.shape;
         setDirty();
         syncDraftControls();
+        refreshSheetControls();
       });
     });
     $$(".unit-toggle button").forEach((button) => button.addEventListener("click", () => setUnit(button.dataset.unit)));
@@ -2142,6 +2201,23 @@
       setDirty();
       refreshSheet();
     });
+    if (els.hexOrientationToggle) {
+      els.hexOrientationToggle.addEventListener("change", () => {
+        state.sheet.hexOrientation = els.hexOrientationToggle.checked ? "pointy-top" : "flat-top";
+        state.sheet.currentPage = 0;
+        setDirty();
+        refreshSheet();
+      });
+    }
+    if (els.hexOrientationToggleDesign) {
+      els.hexOrientationToggleDesign.addEventListener("change", () => {
+        state.sheet.hexOrientation = els.hexOrientationToggleDesign.checked ? "pointy-top" : "flat-top";
+        state.sheet.currentPage = 0;
+        setDirty();
+        refreshSheet();
+        refreshSheetControls();
+      });
+    }
     if (els.hexLayoutToggle) {
       els.hexLayoutToggle.addEventListener("change", () => {
         state.sheet.hexLayoutMode = els.hexLayoutToggle.checked ? "straight-cut" : "grid";

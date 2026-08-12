@@ -274,29 +274,121 @@ test("pagination preserves order and assigns valid slots", () => {
   assert.equal(pages[1][1].designId, `d${layout.capacity + 1}`);
 });
 
+test("pointy-top hexagon bounds swap width and height", () => {
+  const flat = getTokenBounds("hexagon", 1, "flat-top");
+  const pointy = getTokenBounds("hexagon", 1, "pointy-top");
+  assert.equal(flat.width, 1);
+  assert.equal(flat.height, Math.sqrt(3) / 2);
+  assert.equal(pointy.width, Math.sqrt(3) / 2);
+  assert.equal(pointy.height, 1);
+  const printed = getPrintedTokenBounds("hexagon", 1, 0.1, "pointy-top");
+  assert.equal(printed.height, 1.2);
+  assert.equal(printed.width, 1.2 * Math.sqrt(3) / 2);
+});
+
+test("pointy-top hexagon straight-cut returns empty layout", () => {
+  const layout = calculateSheetLayout({
+    paperSize: "letter",
+    orientation: "landscape",
+    shape: "hexagon",
+    sizeIn: 1.5,
+    gutterIn: 0,
+    marginIn: 0,
+    footerIn: 0,
+    layoutMode: "straight-cut",
+    orientation: "pointy-top",
+  });
+  assert.equal(layout.capacity, 0);
+  assert.equal(layout.slots.length, 0);
+});
+
+test("pointy-top hexagon grid layout fits tokens correctly", () => {
+  const layout = calculateSheetLayout({
+    paperSize: "letter",
+    orientation: "portrait",
+    shape: "hexagon",
+    sizeIn: 1,
+    gutterIn: 0.3,
+    marginIn: 0.25,
+    footerIn: 0.28,
+    layoutMode: "grid",
+    orientation: "pointy-top",
+  });
+  assert.ok(layout.capacity > 0);
+  const pointyBounds = getTokenBounds("hexagon", 1, "pointy-top");
+  for (const slot of layout.slots) {
+    assert.equal(Number(slot.width.toFixed(6)), Number(pointyBounds.width.toFixed(6)));
+    assert.equal(Number(slot.height.toFixed(6)), Number(pointyBounds.height.toFixed(6)));
+    assert.ok(slot.x >= layout.usable.x - 1e-8);
+    assert.ok(slot.y >= layout.usable.y - 1e-8);
+    assert.ok(slot.x + slot.width <= layout.usable.x + layout.usable.width + 1e-8);
+    assert.ok(slot.y + slot.height <= layout.usable.y + layout.usable.height + 1e-8);
+  }
+});
+
+test("pointy-top hexagon grid capacity differs from flat-top on same paper", () => {
+  const flatLayout = calculateSheetLayout({
+    paperSize: "letter",
+    orientation: "portrait",
+    shape: "hexagon",
+    sizeIn: 1,
+    gutterIn: 0.3,
+    marginIn: 0.25,
+    footerIn: 0.28,
+    layoutMode: "grid",
+    orientation: "flat-top",
+  });
+  const pointyLayout = calculateSheetLayout({
+    paperSize: "letter",
+    orientation: "portrait",
+    shape: "hexagon",
+    sizeIn: 1,
+    gutterIn: 0.3,
+    marginIn: 0.25,
+    footerIn: 0.28,
+    layoutMode: "grid",
+    orientation: "pointy-top",
+  });
+  assert.ok(flatLayout.capacity > 0);
+  assert.ok(pointyLayout.capacity > 0);
+  assert.notEqual(flatLayout.capacity, pointyLayout.capacity);
+});
+
 test("all supported layout combinations stay inside the printable area", () => {
   for (const paperSize of ["letter", "a4"]) {
-    for (const orientation of ["portrait", "landscape"]) {
+    for (const paperOrientation of ["portrait", "landscape"]) {
       for (const shape of ["circle", "square", "hexagon", "octagon", "triangle"]) {
         for (const sizeIn of [0.5, 1, 1.75, 3]) {
           for (const gutterIn of [0, 0.125, 0.4]) {
             for (const bleedIn of [0, 0.1]) {
-              const layout = calculateSheetLayout({
-                paperSize,
-                orientation,
-                shape,
-                sizeIn,
-                gutterIn,
-                bleedIn,
-                marginIn: 0.25,
-                footerIn: 0.28,
-              });
-              assert.ok(layout.capacity > 0, `${paperSize} ${orientation} ${shape} ${sizeIn}`);
-              for (const slot of layout.slots) {
-                assert.ok(slot.x >= layout.usable.x - 1e-8);
-                assert.ok(slot.y >= layout.usable.y - 1e-8);
-                assert.ok(slot.x + slot.width <= layout.usable.x + layout.usable.width + 1e-8);
-                assert.ok(slot.y + slot.height <= layout.usable.y + layout.usable.height + 1e-8);
+              const orientations = shape === "hexagon" ? ["flat-top", "pointy-top"] : [undefined];
+              for (const orientation of orientations) {
+                const layoutModes = shape === "hexagon" ? ["straight-cut", "grid"] : [undefined];
+                for (const layoutMode of layoutModes) {
+                  const layout = calculateSheetLayout({
+                    paperSize,
+                    orientation: paperOrientation,
+                    shape,
+                    sizeIn,
+                    gutterIn,
+                    bleedIn,
+                    marginIn: 0.25,
+                    footerIn: 0.28,
+                    orientation,
+                    layoutMode,
+                  });
+                  if (orientation === "pointy-top" && layoutMode === "straight-cut") {
+                    assert.equal(layout.capacity, 0);
+                    continue;
+                  }
+                  assert.ok(layout.capacity > 0, `${paperSize} ${paperOrientation} ${shape} ${sizeIn} ${orientation ?? "flat-top"} ${layoutMode ?? "grid"}`);
+                  for (const slot of layout.slots) {
+                    assert.ok(slot.x >= layout.usable.x - 1e-8);
+                    assert.ok(slot.y >= layout.usable.y - 1e-8);
+                    assert.ok(slot.x + slot.width <= layout.usable.x + layout.usable.width + 1e-8);
+                    assert.ok(slot.y + slot.height <= layout.usable.y + layout.usable.height + 1e-8);
+                  }
+                }
               }
             }
           }

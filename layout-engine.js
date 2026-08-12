@@ -22,8 +22,14 @@
       : { width: base.width, height: base.height };
   }
 
-  function tokenBoundsForSize(shape, size) {
-    if (shape === "hexagon" || shape === "triangle") {
+  function tokenBoundsForSize(shape, size, orientation = "flat-top") {
+    if (shape === "triangle") {
+      return { width: size, height: size * SQRT3 / 2 };
+    }
+    if (shape === "hexagon") {
+      if (orientation === "pointy-top") {
+        return { width: size * SQRT3 / 2, height: size };
+      }
       return { width: size, height: size * SQRT3 / 2 };
     }
     if (shape === "octagon") {
@@ -32,14 +38,14 @@
     return { width: size, height: size };
   }
 
-  function getTokenBounds(shape, sizeIn) {
-    return tokenBoundsForSize(shape, clamp(sizeIn, 0.5, 3));
+  function getTokenBounds(shape, sizeIn, orientation = "flat-top") {
+    return tokenBoundsForSize(shape, clamp(sizeIn, 0.5, 3), orientation);
   }
 
-  function getPrintedTokenBounds(shape, sizeIn, bleedIn = 0) {
+  function getPrintedTokenBounds(shape, sizeIn, bleedIn = 0, orientation = "flat-top") {
     const finishedSize = clamp(sizeIn, 0.5, 3);
     const bleed = clamp(bleedIn, 0, 0.25);
-    return tokenBoundsForSize(shape, finishedSize + bleed * 2);
+    return tokenBoundsForSize(shape, finishedSize + bleed * 2, orientation);
   }
 
   function rectSlots(config, usable) {
@@ -99,8 +105,9 @@
     return slots;
   }
 
-  function hexSlots(config, usable, pageHeight) {
-    const bounds = getPrintedTokenBounds("hexagon", config.sizeIn, config.bleedIn);
+  function hexSlots(config, usable, pageHeight, orientation = "flat-top") {
+    if (orientation === "pointy-top") return [];
+    const bounds = getPrintedTokenBounds("hexagon", config.sizeIn, config.bleedIn, orientation);
     const gap = config.gutterIn;
     const pitchX = bounds.width + gap;
     const pitchY = bounds.height + gap;
@@ -144,8 +151,8 @@
     return slots;
   }
 
-  function hexGridSlots(config, usable) {
-    const bounds = getPrintedTokenBounds("hexagon", config.sizeIn, config.bleedIn);
+  function hexGridSlots(config, usable, orientation = "flat-top") {
+    const bounds = getPrintedTokenBounds("hexagon", config.sizeIn, config.bleedIn, orientation);
     const gap = config.gutterIn;
     const pitchX = bounds.width + gap;
     const pitchY = bounds.height + gap;
@@ -196,7 +203,8 @@
     let slots;
     if (config.shape === "hexagon") {
       const layoutMode = options.layoutMode || "straight-cut";
-      slots = layoutMode === "straight-cut" ? hexSlots(config, usable, paper.height) : hexGridSlots(config, usable);
+      const orientation = options.orientation || "flat-top";
+      slots = layoutMode === "straight-cut" ? hexSlots(config, usable, paper.height, orientation) : hexGridSlots(config, usable, orientation);
     }
     else if (config.shape === "triangle") slots = triangleSlots(config, usable);
     else slots = rectSlots(config, usable);
