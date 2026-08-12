@@ -1220,7 +1220,7 @@
   function getSheetLayout() {
     const spec = parseSpecKey(state.sheet.specKey || "circle|1");
     const isHex = spec.shape === "hexagon";
-    const isStraightCut = isHex && state.sheet.hexLayoutMode === "straight-cut";
+    const isStraightCut = isHex && state.sheet.hexLayoutMode === "straight-cut" && state.sheet.hexOrientation === "flat-top";
     return layoutApi.calculateSheetLayout({
       paperSize: state.sheet.paperSize,
       orientation: isStraightCut ? "landscape" : state.sheet.orientation,
