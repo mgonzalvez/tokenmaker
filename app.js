@@ -1230,7 +1230,7 @@
       bleedIn: state.sheet.bleedIn,
       marginIn: state.sheet.marginIn,
       footerIn: 0.28,
-      layoutMode: isStraightCut ? "straight-cut" : undefined,
+      layoutMode: isStraightCut ? "straight-cut" : "grid",
       hexOrientation: state.sheet.hexOrientation,
     });
   }
