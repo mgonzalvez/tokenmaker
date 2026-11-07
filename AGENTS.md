@@ -73,3 +73,11 @@ The layout property test checks every supported shape across representative size
 - `layout-engine.js` — Layout algorithms: `hexSlots()`, `hexGridSlots()`, `calculateSheetLayout()` (layoutMode and hexOrientation routing); `tokenBoundsForSize()` returns swapped dimensions for pointy-top hex
 - `tests/layout-engine.test.js` — Hex grid layout, straight-cut rejection for pointy-top, pointy-top bounds and capacity tests
 - `tests/source-integrity.test.js` — Source assertions for hex-dashed guide styling and suppressTokenStroke fix
+
+## Registry & provenance rule (portfolio-wide)
+
+Personal project — completely separate from Apple work.
+
+- `.npmrc` pins `registry=https://registry.npmjs.org`. Never let Apple's internal npm mirror (`npm.apple.com`, `artifacts.apple.com/artifactory/...`) end up in `package-lock.json`; GitHub Actions can't reach it and CI fails with `ENOTFOUND`.
+- Audit before pushing: `../scripts/check-registry.sh` (add `--fix` to normalize).
+- No work credentials, internal hostnames, proprietary assets, or confidential material in this repo.
