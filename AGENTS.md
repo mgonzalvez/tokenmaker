@@ -78,6 +78,6 @@ The layout property test checks every supported shape across representative size
 
 Personal project — completely separate from Apple work.
 
-- `.npmrc` pins `registry=https://registry.npmjs.org`. Never let Apple's internal npm mirror (`npm.apple.com`, `artifacts.apple.com/artifactory/...`) end up in `package-lock.json`; GitHub Actions can't reach it and CI fails with `ENOTFOUND`.
+- `.npmrc` pins `registry=https://registry.npmjs.org`. This repo has no npm dependencies today, but the pin is committed so a future `npm install` can never write an Apple-mirror lockfile. Never let Apple's internal npm mirror (`npm.apple.com`, `artifacts.apple.com/artifactory/...`) end up in `package-lock.json`; GitHub Actions can't reach it and CI fails with `ENOTFOUND`.
 - Audit before pushing: `../scripts/check-registry.sh` (add `--fix` to normalize).
 - No work credentials, internal hostnames, proprietary assets, or confidential material in this repo.
