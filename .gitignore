@@ -62,4 +62,5 @@ tokenmaker-*.jpeg
 
 # User submitted debug files
 no borders  issue/
+user_request_*/
 blank preview when pointy top is selected.png

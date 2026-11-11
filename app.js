@@ -3,6 +3,9 @@
 
   const APP_VERSION = 1;
   const EXPORT_DPI = 300;
+  const ICON_BASE_UNITS = 620; // icon box size in the 1000x1000 token viewBox at 100% scale
+  const ICON_SCALE_MIN = 25;
+  const ICON_SCALE_MAX = 260;
   const TUTORIAL_STORAGE_KEY = "tokenmaker-tutorial-seen-v1";
   const icons = Array.isArray(window.TOKENMAKER_ICONS) ? window.TOKENMAKER_ICONS : [];
   const layoutApi = window.TokenMakerLayout;
@@ -78,6 +81,7 @@
     selectedIconThumb: $("#selected-icon-thumb"),
     selectedIconName: $("#selected-icon-name"),
     selectedIconSource: $("#selected-icon-source"),
+    coverIconBtn: $("#cover-icon-btn"),
     centerIconBtn: $("#center-icon-btn"),
     resetIconValuesBtn: $("#reset-icon-values-btn"),
     iconFill: $("#icon-fill"),
@@ -659,9 +663,43 @@
   function getIconTransform(design) {
     const x = 500 + clamp(design.iconX, -45, 45) * 10;
     const y = 500 + clamp(design.iconY, -45, 45) * 10;
-    const size = 620 * clamp(design.iconScale, 25, 150) / 100;
+    const size = 620 * clamp(design.iconScale, ICON_SCALE_MIN, ICON_SCALE_MAX) / 100;
     const rotation = clamp(design.iconRotation, -180, 180);
     return { x, y, size, rotation };
+  }
+
+  function aspectFit(icon) {
+    // Rasters and vectors are drawn "meet", so a non-square source only fills
+    // part of the square icon box. Return the fraction of the box the art spans.
+    if (!icon) return 1;
+    let width = icon.width;
+    let height = icon.height;
+    if ((!width || !height) && icon.viewBox) {
+      const bounds = viewBoxRect(icon.viewBox);
+      width = bounds.width;
+      height = bounds.height;
+    }
+    if (!width || !height || !Number.isFinite(width) || !Number.isFinite(height)) return 1;
+    return Math.min(1, width / height);
+  }
+
+  // Smallest icon scale (with the artwork centred) that covers the whole token shape,
+  // accounting for the icon's rotation and the artwork's own aspect ratio.
+  function coverScaleForDesign(design, orientation = "flat-top") {
+    const geometry = shapeGeometry(design.shape, orientation);
+    const angle = clamp(design.iconRotation, -180, 180) * Math.PI / 180;
+    const ux = Math.cos(angle);
+    const uy = Math.sin(angle);
+    const vx = -Math.sin(angle);
+    const vy = Math.cos(angle);
+    let halfSide = 0;
+    for (const [px, py] of geometry.points) {
+      const dx = px - 500;
+      const dy = py - 500;
+      halfSide = Math.max(halfSide, Math.abs(dx * ux + dy * uy), Math.abs(dx * vx + dy * vy));
+    }
+    const neededUnits = 2 * halfSide / aspectFit(design.icon);
+    return Math.ceil((neededUnits / ICON_BASE_UNITS) * 100);
   }
 
   function viewBoxRect(viewBox) {
@@ -974,17 +1012,21 @@
           name,
           sourceText,
           thumbnail,
+          viewBox: normalized.viewBox,
           mime: file.type,
           attribution: "user",
         };
       } else {
         const dataUrl = await readFileAsDataUrl(file);
+        const { width, height } = await measureRaster(dataUrl);
         state.draft.icon = {
           kind: "raster",
           id: uid("upload"),
           name,
           dataUrl,
           thumbnail: dataUrl,
+          width,
+          height,
           mime: file.type,
           attribution: "user",
         };
@@ -1000,6 +1042,15 @@
     } finally {
       els.uploadArtInput.value = "";
     }
+  }
+
+  function measureRaster(dataUrl) {
+    return new Promise((resolve) => {
+      const image = new Image();
+      image.onload = () => resolve({ width: image.naturalWidth || image.width, height: image.naturalHeight || image.height });
+      image.onerror = () => resolve({ width: 0, height: 0 });
+      image.src = dataUrl;
+    });
   }
 
   function readFileAsDataUrl(file) {
@@ -2096,6 +2147,27 @@
     bindRange(els.iconScale, "iconScale", els.iconScaleOutput, (value) => `${value}%`);
     bindRange(els.iconRotation, "iconRotation", els.iconRotationOutput, (value) => `${value}°`);
     bindRange(els.iconStrokeWidth, "iconStrokeWidth", els.iconStrokeOutput, (value) => `${value} px`);
+    els.coverIconBtn.addEventListener("click", () => {
+      if (!state.draft.icon) {
+        toast("Choose or upload artwork first.", "error");
+        return;
+      }
+      const needed = coverScaleForDesign(state.draft, state.sheet.hexOrientation);
+      state.draft.iconScale = clamp(needed, ICON_SCALE_MIN, ICON_SCALE_MAX);
+      state.draft.iconX = 0;
+      state.draft.iconY = 0;
+      setDirty();
+      syncDraftControls();
+      renderPreview();
+      if (needed > ICON_SCALE_MAX) {
+        toast(
+          `Full coverage needs ${needed}% but the scale limit is ${ICON_SCALE_MAX}%. Crop the artwork to a square so it fills the token.`,
+          "error",
+        );
+      } else {
+        toast(`Artwork scaled to ${state.draft.iconScale}% to cover the ${state.draft.shape}.`);
+      }
+    });
     els.centerIconBtn.addEventListener("click", () => {
       state.draft.iconX = state.draft.valuePlacement === "left" ? 13 : 0;
       state.draft.iconY = 0;

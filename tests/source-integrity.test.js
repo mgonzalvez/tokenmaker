@@ -63,6 +63,17 @@ test("the guided tutorial has persistent first-visit behavior and anchored contr
   assert.match(app, /localStorage\.setItem\(TUTORIAL_STORAGE_KEY/);
 });
 
+test("icon scale can exceed the token shape and has a one-click cover action", () => {
+  assert.match(html, /id="icon-scale" type="range" min="25" max="260"/);
+  assert.match(html, /id="cover-icon-btn" class="small-button" type="button"/);
+  assert.match(app, /const ICON_SCALE_MAX = 260;/);
+  assert.match(app, /const ICON_SCALE_MIN = 25;/);
+  assert.match(app, /clamp\(design\.iconScale, ICON_SCALE_MIN, ICON_SCALE_MAX\)/);
+  assert.match(app, /function coverScaleForDesign\(design, orientation = "flat-top"\)/);
+  assert.match(app, /els\.coverIconBtn\.addEventListener\("click"/);
+  assert.match(app, /const \{ width, height \} = await measureRaster\(dataUrl\)/);
+});
+
 test("triangle is not offered as a token shape", () => {
   assert.doesNotMatch(html, /data-shape="triangle"/);
 });

@@ -11,10 +11,11 @@ TokenMaker is a static, framework-free GitHub Pages application. It has no build
 3. Preview and export must use `layout-engine.js`; do not duplicate packing math in `app.js`.
 4. Token SVGs use a 1000 × 1000 design viewBox. Hexagon physical height is `size × √3 / 2`. Octagon and other rectangular-bounding shapes use `size × size`. Dormant triangle geometry is retained in the layout engine but is not exposed in the UI.
 5. The PDF renderer uses 300 pixels per inch and places the final page image at exact physical dimensions.
-6. Uploaded SVG content must pass through `normalizeSvgSource()` before it is inserted into the document.
-7. Uploaded raster artwork and SVG source text must remain serializable in project JSON.
-8. Keep the Fractal Symbols attribution in the site footer and printable PDF footer.
-9. Hex sheets support two layout modes: "straight-cut" (alternating rows, zero gutter, landscape forced, no cutting guides) and "grid" (rectangular grid, user-controlled gutter/orientation, standard cutting guides). The toggle defaults to straight-cut for backward compatibility and is only visible for hexagon sheets. Straight-cut is incompatible with pointy-top orientation and is disabled when pointy-top is active.
+6. Icon artwork is drawn in a 620-unit box at 100% scale inside the 1000-unit token viewBox and is clipped to the token shape. The scale slider runs 25-260%. Full coverage of a hexagon needs 162% (a circle or square needs 160%), so the `coverScaleForDesign()` helper and the "Cover" button are the supported way to fill a token completely; non-square uploads need more scale than the cap allows and the app tells the user to crop to a square.
+7. Uploaded SVG content must pass through `normalizeSvgSource()` before it is inserted into the document.
+8. Uploaded raster artwork and SVG source text must remain serializable in project JSON.
+9. Keep the Fractal Symbols attribution in the site footer and printable PDF footer.
+10. Hex sheets support two layout modes: "straight-cut" (alternating rows, zero gutter, landscape forced, no cutting guides) and "grid" (rectangular grid, user-controlled gutter/orientation, standard cutting guides). The toggle defaults to straight-cut for backward compatibility and is only visible for hexagon sheets. Straight-cut is incompatible with pointy-top orientation and is disabled when pointy-top is active.
 
 ## Project State
 
