@@ -6,9 +6,46 @@
   "use strict";
 
   const SQRT3 = Math.sqrt(3);
+  const ICON_BASE_UNITS = 620; // icon box size in the 1000-unit token viewBox at 100% scale
   const PAPER_SIZES = Object.freeze({
     letter: Object.freeze({ width: 8.5, height: 11, label: "US Letter" }),
     a4: Object.freeze({ width: 210 / 25.4, height: 297 / 25.4, label: "A4" }),
+  });
+
+  const TOKEN_SHAPES = Object.freeze({
+    circle: Object.freeze({
+      element: '<circle class="token-shape" cx="500" cy="500" r="495"/>',
+      path: "M500 5a495 495 0 1 1 0 990 495 495 0 1 1 0-990Z",
+      points: [[500, 5], [995, 500], [500, 995], [5, 500]],
+      radius: 495,
+    }),
+    square: Object.freeze({
+      element: '<rect class="token-shape" x="5" y="5" width="990" height="990" rx="4"/>',
+      path: "M5 5H995V995H5Z",
+      points: [[5, 5], [995, 5], [995, 995], [5, 995]],
+    }),
+    hexagon: Object.freeze({
+      "flat-top": Object.freeze({
+        element: '<path class="token-shape" d="M0 500 250 66.9873h500L1000 500 750 933.0127H250Z"/>',
+        path: "M0 500 250 66.9873h500L1000 500 750 933.0127H250Z",
+        points: [[0, 500], [250, 66.9873], [750, 66.9873], [1000, 500], [750, 933.0127], [250, 933.0127]],
+      }),
+      "pointy-top": Object.freeze({
+        element: '<path class="token-shape" d="M500 0L933.0127 250V750L500 1000L66.9873 750V250Z"/>',
+        path: "M500 0L933.0127 250V750L500 1000L66.9873 750V250Z",
+        points: [[500, 0], [933.0127, 250], [933.0127, 750], [500, 1000], [66.9873, 750], [66.9873, 250]],
+      }),
+    }),
+    octagon: Object.freeze({
+      element: '<path class="token-shape" d="M292.893 0H707.107L1000 292.893V707.107L707.107 1000H292.893L0 707.107V292.893Z"/>',
+      path: "M292.893 0H707.107L1000 292.893V707.107L707.107 1000H292.893L0 707.107V292.893Z",
+      points: [[292.893, 0], [707.107, 0], [1000, 292.893], [1000, 707.107], [707.107, 1000], [292.893, 1000], [0, 707.107], [0, 292.893]],
+    }),
+    triangle: Object.freeze({
+      element: '<path class="token-shape" d="M500 66.9873 1000 933.0127H0Z"/>',
+      path: "M500 66.9873 1000 933.0127H0Z",
+      points: [[500, 66.9873], [1000, 933.0127], [0, 933.0127]],
+    }),
   });
 
   function clamp(value, min, max) {
@@ -46,6 +83,34 @@
     const finishedSize = clamp(sizeIn, 0.5, 3);
     const bleed = clamp(bleedIn, 0, 0.25);
     return tokenBoundsForSize(shape, finishedSize + bleed * 2, orientation);
+  }
+
+  function getTokenShape(shape, orientation = "flat-top") {
+    const entry = TOKEN_SHAPES[shape] || TOKEN_SHAPES.circle;
+    if (shape === "hexagon") {
+      return orientation === "pointy-top" ? entry["pointy-top"] : entry["flat-top"];
+    }
+    return entry;
+  }
+
+  // Smallest icon scale that covers the whole token shape. The icon box is square,
+  // so `aspectRatio` (1 for square artwork or crop-to-fill mode) describes how much
+  // of that box the artwork actually spans.
+  function coverScaleForShape(shape, orientation = "flat-top", rotationDegrees = 0, aspectRatio = 1) {
+    const shapeSpec = getTokenShape(shape, orientation);
+    const angle = clamp(rotationDegrees, -180, 180) * Math.PI / 180;
+    const ux = Math.cos(angle);
+    const uy = Math.sin(angle);
+    const vx = -Math.sin(angle);
+    const vy = Math.cos(angle);
+    let halfSide = shapeSpec.radius ? shapeSpec.radius : 0;
+    for (const [px, py] of shapeSpec.points) {
+      const dx = px - 500;
+      const dy = py - 500;
+      halfSide = Math.max(halfSide, Math.abs(dx * ux + dy * uy), Math.abs(dx * vx + dy * vy));
+    }
+    const safeRatio = Number.isFinite(aspectRatio) && aspectRatio > 0 ? Math.min(1, aspectRatio) : 1;
+    return Math.ceil((2 * halfSide / safeRatio / ICON_BASE_UNITS) * 100);
   }
 
   function rectSlots(config, usable) {
@@ -338,14 +403,17 @@
   }
 
   return Object.freeze({
+    ICON_BASE_UNITS,
     PAPER_SIZES,
     buildPrintablePages,
     calculateSheetLayout,
+    coverScaleForShape,
     getCutGuideSlots,
     getPrintedTokenBounds,
     getSheetGuideSegments,
     getPaperDimensions,
     getTokenBounds,
+    getTokenShape,
     inchesToUnit,
     paginatePlacements,
     unitToInches,

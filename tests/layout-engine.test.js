@@ -3,11 +3,14 @@ const assert = require("node:assert/strict");
 const {
   buildPrintablePages,
   calculateSheetLayout,
+  coverScaleForShape,
   getCutGuideSlots,
   getPaperDimensions,
   getPrintedTokenBounds,
   getSheetGuideSegments,
   getTokenBounds,
+  getTokenShape,
+  ICON_BASE_UNITS,
   inchesToUnit,
   paginatePlacements,
   unitToInches,
@@ -396,4 +399,81 @@ test("all supported layout combinations stay inside the printable area", () => {
       }
     }
   }
+});
+
+test("token shape geometry is a single shared source", () => {
+  const flat = getTokenShape("hexagon", "flat-top");
+  const pointy = getTokenShape("hexagon", "pointy-top");
+  assert.equal(flat.points.length, 6);
+  assert.equal(flat.points[0][0], 0);
+  assert.equal(pointy.points[0][1], 0);
+  assert.equal(getTokenShape("unknown-shape").element, getTokenShape("circle").element);
+  assert.equal(getTokenShape("circle").radius, 495);
+});
+
+test("cover scale is the exact scale that fills each token shape", () => {
+  assert.equal(coverScaleForShape("circle", "flat-top"), 160);
+  assert.equal(coverScaleForShape("square", "flat-top"), 160);
+  assert.equal(coverScaleForShape("hexagon", "flat-top"), 162);
+  assert.equal(coverScaleForShape("hexagon", "pointy-top"), 162);
+  assert.equal(coverScaleForShape("octagon", "flat-top"), 162);
+  assert.equal(coverScaleForShape("triangle", "flat-top"), 162);
+});
+
+test("cover scale reacts to icon rotation and non-square artwork", () => {
+  assert.equal(coverScaleForShape("hexagon", "flat-top", 45), 156);
+  assert.equal(coverScaleForShape("square", "flat-top", 45), 226);
+  assert.equal(coverScaleForShape("square", "flat-top", 0, 0.75), 213);
+  assert.equal(coverScaleForShape("circle", "flat-top", 90), 160);
+});
+
+test("a circle needs its true radius, not its four cardinal points", () => {
+  assert.equal(coverScaleForShape("circle", "flat-top", 45), 160);
+  assert.ok(coverScaleForShape("circle", "flat-top", 45) > coverScaleForShape("circle", "flat-top", 0) - 1);
+});
+
+test("the computed cover scale really contains the whole shape", () => {
+  for (const shape of ["circle", "square", "hexagon", "octagon", "triangle"]) {
+    for (const orientation of ["flat-top", "pointy-top"]) {
+      for (const rotation of [0, 15, 30, 45, 90, 135, -180]) {
+        for (const aspect of [1, 0.5, 2]) {
+          const scale = coverScaleForShape(shape, orientation, rotation, aspect);
+          const half = (scale * ICON_BASE_UNITS / 100) / 2;
+          const angle = rotation * Math.PI / 180;
+          const ux = Math.cos(angle);
+          const uy = Math.sin(angle);
+          const vx = -Math.sin(angle);
+          const vy = Math.cos(angle);
+          const spec = getTokenShape(shape, orientation);
+          const samples = spec.radius
+            ? Array.from({ length: 24 }, (_, i) => {
+                const t = (i / 24) * Math.PI * 2;
+                return [500 + spec.radius * Math.cos(t), 500 + spec.radius * Math.sin(t)];
+              })
+            : spec.points;
+          for (const [px, py] of samples) {
+            const dx = px - 500;
+            const dy = py - 500;
+            const span = Math.min(1, aspect); // artwork spans the box fully on one axis, partially on the other
+            const u = Math.abs(dx * ux + dy * uy);
+            const v = Math.abs(dx * vx + dy * vy);
+            assert.ok(
+              u <= half * span + 1e-6 && v <= half + 1e-6,
+              `${shape} ${orientation} rotated ${rotation} aspect ${aspect}`,
+            );
+            assert.ok(
+              u <= half + 1e-6 && v <= half * span + 1e-6,
+              `${shape} ${orientation} rotated ${rotation} aspect ${aspect} (other axis)`,
+            );
+          }
+        }
+      }
+    }
+  }
+});
+
+test("cover scale is minimal: one percent less leaves a gap", () => {
+  const justBelow = coverScaleForShape("hexagon", "flat-top") - 1;
+  const half = (justBelow * ICON_BASE_UNITS / 100) / 2;
+  assert.ok(Math.abs(0 - 500) > half, "the left hexagon vertex is uncovered at 161%");
 });

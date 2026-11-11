@@ -3,7 +3,6 @@
 
   const APP_VERSION = 1;
   const EXPORT_DPI = 300;
-  const ICON_BASE_UNITS = 620; // icon box size in the 1000x1000 token viewBox at 100% scale
   const ICON_SCALE_MIN = 25;
   const ICON_SCALE_MAX = 260;
   const TUTORIAL_STORAGE_KEY = "tokenmaker-tutorial-seen-v1";
@@ -183,7 +182,7 @@
       target: ".inspector-panel",
       workspace: "designer",
       title: "Set the shape and style",
-      copy: "Choose Circle, Square, or Hex, set the finished physical size, then adjust background, border, icon colors, scale, and rotation. You can also add a numeric value.",
+      copy: "Choose Circle, Square, or Hex, set the finished physical size, then adjust background, border, icon colors, scale, and rotation. Fill shape scales the artwork so it covers the token edge to edge. You can also add a numeric value.",
     },
     {
       target: "#token-preview-wrap",
@@ -257,6 +256,7 @@
       iconStroke: "#17223b",
       iconStrokeWidth: 0,
       iconScale: 100,
+      iconFit: "fit",
       iconRotation: 0,
       iconX: 0,
       iconY: 0,
@@ -538,40 +538,7 @@
   }
 
   function shapeGeometry(shape, orientation = "flat-top") {
-    const geometries = {
-      circle: {
-        element: '<circle class="token-shape" cx="500" cy="500" r="495"/>',
-        path: "M500 5a495 495 0 1 1 0 990 495 495 0 1 1 0-990Z",
-        points: [[500, 5], [995, 500], [500, 995], [5, 500]],
-      },
-      square: {
-        element: '<rect class="token-shape" x="5" y="5" width="990" height="990" rx="4"/>',
-        path: "M5 5H995V995H5Z",
-        points: [[5, 5], [995, 5], [995, 995], [5, 995]],
-      },
-      hexagon: {
-        element: orientation === "pointy-top"
-          ? '<path class="token-shape" d="M500 0L933.0127 250V750L500 1000L66.9873 750V250Z"/>'
-          : '<path class="token-shape" d="M0 500 250 66.9873h500L1000 500 750 933.0127H250Z"/>',
-        path: orientation === "pointy-top"
-          ? "M500 0L933.0127 250V750L500 1000L66.9873 750V250Z"
-          : "M0 500 250 66.9873h500L1000 500 750 933.0127H250Z",
-        points: orientation === "pointy-top"
-          ? [[500, 0], [933.0127, 250], [933.0127, 750], [500, 1000], [66.9873, 750], [66.9873, 250]]
-          : [[0, 500], [250, 66.9873], [750, 66.9873], [1000, 500], [750, 933.0127], [250, 933.0127]],
-      },
-      octagon: {
-        element: '<path class="token-shape" d="M292.893 0H707.107L1000 292.893V707.107L707.107 1000H292.893L0 707.107V292.893Z"/>',
-        path: "M292.893 0H707.107L1000 292.893V707.107L707.107 1000H292.893L0 707.107V292.893Z",
-        points: [[292.893, 0], [707.107, 0], [1000, 292.893], [1000, 707.107], [707.107, 1000], [292.893, 1000], [0, 707.107], [0, 292.893]],
-      },
-      triangle: {
-        element: '<path class="token-shape" d="M500 66.9873 1000 933.0127H0Z"/>',
-        path: "M500 66.9873 1000 933.0127H0Z",
-        points: [[500, 66.9873], [1000, 933.0127], [0, 933.0127]],
-      },
-    };
-    return geometries[shape] || geometries.circle;
+    return layoutApi.getTokenShape(shape, orientation);
   }
 
   function normalizeSvgSource(sourceText) {
@@ -663,14 +630,17 @@
   function getIconTransform(design) {
     const x = 500 + clamp(design.iconX, -45, 45) * 10;
     const y = 500 + clamp(design.iconY, -45, 45) * 10;
-    const size = 620 * clamp(design.iconScale, ICON_SCALE_MIN, ICON_SCALE_MAX) / 100;
+    const size = layoutApi.ICON_BASE_UNITS * clamp(design.iconScale, ICON_SCALE_MIN, ICON_SCALE_MAX) / 100;
     const rotation = clamp(design.iconRotation, -180, 180);
     return { x, y, size, rotation };
   }
 
-  function aspectFit(icon) {
-    // Rasters and vectors are drawn "meet", so a non-square source only fills
-    // part of the square icon box. Return the fraction of the box the art spans.
+  function aspectFit(design) {
+    // In "fill" mode the artwork is sliced to the icon box, so its own aspect
+    // ratio no longer leaves gaps. In "fit" mode a non-square source only spans
+    // part of the box, so covering the token needs a larger scale.
+    if (design.iconFit === "fill") return 1;
+    const icon = design.icon;
     if (!icon) return 1;
     let width = icon.width;
     let height = icon.height;
@@ -683,23 +653,9 @@
     return Math.min(1, width / height);
   }
 
-  // Smallest icon scale (with the artwork centred) that covers the whole token shape,
-  // accounting for the icon's rotation and the artwork's own aspect ratio.
+  // Smallest icon scale (with the artwork centred) that covers the whole token shape.
   function coverScaleForDesign(design, orientation = "flat-top") {
-    const geometry = shapeGeometry(design.shape, orientation);
-    const angle = clamp(design.iconRotation, -180, 180) * Math.PI / 180;
-    const ux = Math.cos(angle);
-    const uy = Math.sin(angle);
-    const vx = -Math.sin(angle);
-    const vy = Math.cos(angle);
-    let halfSide = 0;
-    for (const [px, py] of geometry.points) {
-      const dx = px - 500;
-      const dy = py - 500;
-      halfSide = Math.max(halfSide, Math.abs(dx * ux + dy * uy), Math.abs(dx * vx + dy * vy));
-    }
-    const neededUnits = 2 * halfSide / aspectFit(design.icon);
-    return Math.ceil((neededUnits / ICON_BASE_UNITS) * 100);
+    return layoutApi.coverScaleForShape(design.shape, orientation, design.iconRotation, aspectFit(design));
   }
 
   function viewBoxRect(viewBox) {
@@ -721,8 +677,10 @@
     const x0 = -size / 2;
     const y0 = -size / 2;
 
+    const fit = design.iconFit === "fill" ? "xMidYMid slice" : "xMidYMid meet";
+
     if (icon.kind === "raster") {
-      return `<g transform="${transform}"><image href="${escapeXml(icon.dataUrl)}" x="${x0}" y="${y0}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/></g>`;
+      return `<g transform="${transform}"><image href="${escapeXml(icon.dataUrl)}" x="${x0}" y="${y0}" width="${size}" height="${size}" preserveAspectRatio="${fit}"/></g>`;
     }
 
     const asset = await getVectorAsset(icon);
@@ -732,7 +690,7 @@
     const markup = paintVectorMarkup(asset.markup, fill, stroke, strokeWidth);
     const bounds = viewBoxRect(asset.viewBox);
     const clipId = `tm-icon-clip-${++renderCounter}`;
-    return `<g transform="${transform}"><svg x="${x0}" y="${y0}" width="${size}" height="${size}" viewBox="${escapeXml(asset.viewBox)}" preserveAspectRatio="xMidYMid meet" overflow="hidden"><defs><clipPath id="${clipId}" clipPathUnits="userSpaceOnUse"><rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}"/></clipPath></defs><g clip-path="url(#${clipId})">${markup}</g></svg></g>`;
+    return `<g transform="${transform}"><svg x="${x0}" y="${y0}" width="${size}" height="${size}" viewBox="${escapeXml(asset.viewBox)}" preserveAspectRatio="${fit}" overflow="hidden"><defs><clipPath id="${clipId}" clipPathUnits="userSpaceOnUse"><rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}"/></clipPath></defs><g clip-path="url(#${clipId})">${markup}</g></svg></g>`;
   }
 
   function valueTextMarkup(design, paint = {}) {
@@ -889,6 +847,9 @@
     setColorInputs("iconStroke", draft.iconStroke);
     els.iconScale.value = draft.iconScale;
     els.iconScaleOutput.textContent = `${draft.iconScale}%`;
+    $$("[data-icon-fit]").forEach((button) =>
+      button.classList.toggle("active", button.dataset.iconFit === draft.iconFit),
+    );
     els.iconRotation.value = draft.iconRotation;
     els.iconRotationOutput.textContent = `${draft.iconRotation}°`;
     els.iconStrokeWidth.value = draft.iconStrokeWidth;
@@ -1036,7 +997,11 @@
       setDirty();
       syncDraftControls();
       renderIconLibrary();
-      toast(`${name} is ready to use.`);
+      if (aspectFit(state.draft) < 0.98) {
+        toast(`${name} is ready. It is not square, so use "Crop to fill" or "Fill shape" to cover the whole token.`);
+      } else {
+        toast(`${name} is ready to use.`);
+      }
     } catch (error) {
       toast(error.message || "The artwork could not be loaded.", "error");
     } finally {
@@ -1084,6 +1049,7 @@
     state.draft.iconStroke = defaults.iconStroke;
     state.draft.iconStrokeWidth = defaults.iconStrokeWidth;
     state.draft.iconScale = defaults.iconScale;
+    state.draft.iconFit = defaults.iconFit;
     state.draft.iconRotation = defaults.iconRotation;
     state.draft.iconX = state.draft.valuePlacement === "left" ? 13 : defaults.iconX;
     state.draft.iconY = defaults.iconY;
@@ -1990,6 +1956,8 @@
     design.shape = ["circle", "square", "hexagon", "octagon"].includes(raw.shape) ? raw.shape : "circle";
     design.sizeIn = clamp(raw.sizeIn, 0.5, 3);
     design.icon = raw.icon && typeof raw.icon === "object" ? raw.icon : makeLibraryIcon();
+    design.iconFit = raw.iconFit === "fill" ? "fill" : "fit";
+    design.iconScale = clamp(Number(raw.iconScale) || base.iconScale, ICON_SCALE_MIN, ICON_SCALE_MAX);
     return design;
   }
 
@@ -2152,7 +2120,13 @@
         toast("Choose or upload artwork first.", "error");
         return;
       }
-      const needed = coverScaleForDesign(state.draft, state.sheet.hexOrientation);
+      let needed = coverScaleForDesign(state.draft, state.sheet.hexOrientation);
+      let cropped = false;
+      if (needed > ICON_SCALE_MAX && state.draft.iconFit === "fit") {
+        state.draft.iconFit = "fill";
+        needed = coverScaleForDesign(state.draft, state.sheet.hexOrientation);
+        cropped = true;
+      }
       state.draft.iconScale = clamp(needed, ICON_SCALE_MIN, ICON_SCALE_MAX);
       state.draft.iconX = 0;
       state.draft.iconY = 0;
@@ -2161,9 +2135,11 @@
       renderPreview();
       if (needed > ICON_SCALE_MAX) {
         toast(
-          `Full coverage needs ${needed}% but the scale limit is ${ICON_SCALE_MAX}%. Crop the artwork to a square so it fills the token.`,
+          `Full coverage needs ${needed}% but the scale limit is ${ICON_SCALE_MAX}%. Crop the artwork to a square outside TokenMaker.`,
           "error",
         );
+      } else if (cropped) {
+        toast(`Artwork cropped and scaled to ${state.draft.iconScale}% to cover the ${state.draft.shape}.`);
       } else {
         toast(`Artwork scaled to ${state.draft.iconScale}% to cover the ${state.draft.shape}.`);
       }
@@ -2186,6 +2162,14 @@
       setDirty();
       renderPreview();
     });
+    $$("[data-icon-fit]").forEach((button) =>
+      button.addEventListener("click", () => {
+        if (state.draft.iconFit === button.dataset.iconFit) return;
+        state.draft.iconFit = button.dataset.iconFit;
+        setDirty();
+        renderPreview();
+      }),
+    );
     $$("[data-value-placement]").forEach((button) =>
       button.addEventListener("click", () => applyValuePlacement(button.dataset.valuePlacement)),
     );

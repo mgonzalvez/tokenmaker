@@ -293,7 +293,7 @@
                 <span id="selected-icon-thumb" class="selected-icon-thumb"></span>
                 <div><b id="selected-icon-name">Heart</b><span id="selected-icon-source">Fractal Symbols · Combat</span></div>
                 <div class="selected-icon-actions">
-                  <button id="cover-icon-btn" class="small-button" type="button" title="Scale the artwork until it completely covers the token shape">Cover</button>
+                  <button id="cover-icon-btn" class="small-button" type="button" title="Scale the artwork until it completely covers the token shape">Fill shape</button>
                   <button id="center-icon-btn" class="small-button" type="button">Center</button>
                   <button id="reset-icon-values-btn" class="small-button reset-button" type="button">Reset icon</button>
                 </div>
@@ -315,6 +315,14 @@
               <div class="field-group compact">
                 <div class="field-heading"><label for="icon-scale">Scale</label><output id="icon-scale-output">100%</output></div>
                 <input id="icon-scale" type="range" min="25" max="260" step="1" value="100">
+              </div>
+              <div class="field-group compact">
+                <div class="field-heading"><span>Artwork fit</span></div>
+                <div class="segmented-control two" role="group" aria-label="Artwork fit">
+                  <button class="active" type="button" data-icon-fit="fit">Whole image</button>
+                  <button type="button" data-icon-fit="fill">Crop to fill</button>
+                </div>
+                <p class="control-note">Whole image keeps the artwork uncropped. Crop to fill scales and trims it so the art covers the token edge to edge.</p>
               </div>
               <div class="field-group compact">
                 <div class="field-heading"><label for="icon-rotation">Rotation</label><output id="icon-rotation-output">0°</output></div>

@@ -39,10 +39,28 @@ test("GitHub Pages custom domain is configured", () => {
 });
 
 test("imported vectors are clipped to their declared viewBox", () => {
-  assert.match(app, /preserveAspectRatio="xMidYMid meet" overflow="hidden"/);
+  assert.match(app, /preserveAspectRatio="\$\{fit\}" overflow="hidden"/);
   assert.match(app, /clipPathUnits="userSpaceOnUse"/);
   assert.match(app, /<g clip-path="url\(#\$\{clipId\}\)">\$\{markup\}<\/g>/);
   assert.doesNotMatch(app, /preserveAspectRatio="xMidYMid meet" overflow="visible"/);
+});
+
+test("icon artwork can cover the whole token shape with scale plus crop-to-fill", () => {
+  assert.match(html, /id="icon-scale" type="range" min="25" max="260"/);
+  assert.match(html, /id="cover-icon-btn" class="small-button" type="button" title="Scale the artwork until it completely covers the token shape">Fill shape<\/button>/);
+  assert.match(html, /class="segmented-control two" role="group" aria-label="Artwork fit"/);
+  assert.match(html, /data-icon-fit="fit">Whole image<\/button>/);
+  assert.match(html, /data-icon-fit="fill">Crop to fill<\/button>/);
+  assert.match(app, /const ICON_SCALE_MAX = 260;/);
+  assert.match(app, /const ICON_SCALE_MIN = 25;/);
+  assert.match(app, /clamp\(design\.iconScale, ICON_SCALE_MIN, ICON_SCALE_MAX\)/);
+  assert.match(app, /function coverScaleForDesign\(design, orientation = "flat-top"\)/);
+  assert.match(app, /const fit = design\.iconFit === "fill" \? "xMidYMid slice" : "xMidYMid meet";/);
+  assert.match(app, /if \(design\.iconFit === "fill"\) return 1;/);
+  assert.match(app, /els\.coverIconBtn\.addEventListener\("click"/);
+  assert.match(app, /if \(needed > ICON_SCALE_MAX && state\.draft\.iconFit === "fit"\)/);
+  assert.match(app, /design\.iconFit = raw\.iconFit === "fill" \? "fill" : "fit";/);
+  assert.match(app, /const \{ width, height \} = await measureRaster\(dataUrl\)/);
 });
 
 test("the guided tutorial has persistent first-visit behavior and anchored controls", () => {
@@ -61,17 +79,6 @@ test("the guided tutorial has persistent first-visit behavior and anchored contr
   assert.match(app, /scrollIntoView/);
   assert.match(app, /positionTutorialCallout/);
   assert.match(app, /localStorage\.setItem\(TUTORIAL_STORAGE_KEY/);
-});
-
-test("icon scale can exceed the token shape and has a one-click cover action", () => {
-  assert.match(html, /id="icon-scale" type="range" min="25" max="260"/);
-  assert.match(html, /id="cover-icon-btn" class="small-button" type="button"/);
-  assert.match(app, /const ICON_SCALE_MAX = 260;/);
-  assert.match(app, /const ICON_SCALE_MIN = 25;/);
-  assert.match(app, /clamp\(design\.iconScale, ICON_SCALE_MIN, ICON_SCALE_MAX\)/);
-  assert.match(app, /function coverScaleForDesign\(design, orientation = "flat-top"\)/);
-  assert.match(app, /els\.coverIconBtn\.addEventListener\("click"/);
-  assert.match(app, /const \{ width, height \} = await measureRaster\(dataUrl\)/);
 });
 
 test("triangle is not offered as a token shape", () => {

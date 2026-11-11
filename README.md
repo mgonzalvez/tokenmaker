@@ -23,6 +23,8 @@ TokenMaker is an MVP ready for functional validation and iterative polishing. It
   - 286 vectors from the newer complete pack
   - 41 non-duplicate legacy vectors
 - Custom SVG, PNG, and JPG artwork
+- Artwork fit modes: **Whole image** (nothing cropped) or **Crop to fill** (artwork trimmed so it covers the token)
+- **Fill shape** button that centers the artwork and scales it to the exact percentage needed to cover the shape (162% for a hexagon, 160% for a circle or square)
 - Multiple saved designs per project
 - One token shape and finished size per printable sheet
 - Mixed designs and per-design quantities on the same compatible sheet
@@ -45,7 +47,7 @@ TokenMaker is an MVP ready for functional validation and iterative polishing. It
 
 1. Select a library icon or upload artwork.
 2. Choose a token shape and finished physical size.
-3. Adjust the background, border, icon, and optional numeric value.
+3. Adjust the background, border, icon, and optional numeric value. Use **Fill shape** if the artwork should reach the token edge.
 4. Add the design to the project.
 5. Repeat for any additional compatible designs.
 6. Select **Build printable sheet**.

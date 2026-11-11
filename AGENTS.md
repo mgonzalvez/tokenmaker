@@ -11,7 +11,7 @@ TokenMaker is a static, framework-free GitHub Pages application. It has no build
 3. Preview and export must use `layout-engine.js`; do not duplicate packing math in `app.js`.
 4. Token SVGs use a 1000 × 1000 design viewBox. Hexagon physical height is `size × √3 / 2`. Octagon and other rectangular-bounding shapes use `size × size`. Dormant triangle geometry is retained in the layout engine but is not exposed in the UI.
 5. The PDF renderer uses 300 pixels per inch and places the final page image at exact physical dimensions.
-6. Icon artwork is drawn in a 620-unit box at 100% scale inside the 1000-unit token viewBox and is clipped to the token shape. The scale slider runs 25-260%. Full coverage of a hexagon needs 162% (a circle or square needs 160%), so the `coverScaleForDesign()` helper and the "Cover" button are the supported way to fill a token completely; non-square uploads need more scale than the cap allows and the app tells the user to crop to a square.
+6. Token shape geometry (`element`, `path`, `points`, and the circle `radius`) is defined once in `layout-engine.js` as `TOKEN_SHAPES` / `getTokenShape()`. `app.js` must not re-declare shape polygons. Icon artwork is drawn in a 620-unit box at 100% scale (`layoutApi.ICON_BASE_UNITS`) inside the 1000-unit token viewBox and is clipped to the token shape. `design.iconFit` is `"fit"` (whole image, letterboxed) or `"fill"` (cropped to the icon box). The scale slider runs 25–260%, and the "Fill shape" button computes the exact coverage scale with `coverScaleForShape()` (162% for a hexagon, 160% for a circle or square).
 7. Uploaded SVG content must pass through `normalizeSvgSource()` before it is inserted into the document.
 8. Uploaded raster artwork and SVG source text must remain serializable in project JSON.
 9. Keep the Fractal Symbols attribution in the site footer and printable PDF footer.
@@ -42,6 +42,8 @@ TokenMaker is a static, framework-free GitHub Pages application. It has no build
 
 `placementsBySpec` maps a sheet spec to an ordered array of design IDs. Quantities are derived from repeated IDs rather than stored separately.
 
+Each `TokenDesign` carries `icon` (library, uploaded SVG, or uploaded raster with `width`/`height`), `iconScale` (25–260), `iconFit` (`"fit"` or `"fill"`), `iconRotation`, `iconX`/`iconY` in preview units, and the value fields.
+
 `hexLayoutMode` and `hexOrientation` are only active when `specKey` starts with `hex|`. `hexLayoutMode` controls the packing algorithm used by `calculateSheetLayout()` — straight-cut uses `hexSlots()` while grid uses `hexGridSlots()`. `hexOrientation` controls the token rotation: flat-top has a flat side facing up; pointy-top has a vertex facing up. Pointy-top swaps the token's width and height bounds (`size × √3/2` × `size` instead of `size` × `size × √3/2`). Straight-cut layout is incompatible with pointy-top and returns zero slots.
 
 ## Icon Library
@@ -70,9 +72,9 @@ The layout property test checks every supported shape across representative size
 ## Key Files
 
 - `index.html` — UI for designer, sheet builder, hex layout toggle, hex orientation toggle, octagon shape button
-- `app.js` — Main app logic: `shapeGeometry()`, `hexLayoutMode`/`hexOrientation` state, `refreshSheetControls()`, `guideMarkup()` (hex-dashed styling), `getSheetLayout()`
-- `layout-engine.js` — Layout algorithms: `hexSlots()`, `hexGridSlots()`, `calculateSheetLayout()` (layoutMode and hexOrientation routing); `tokenBoundsForSize()` returns swapped dimensions for pointy-top hex
-- `tests/layout-engine.test.js` — Hex grid layout, straight-cut rejection for pointy-top, pointy-top bounds and capacity tests
+- `app.js` — Main app logic: `shapeGeometry()` (delegates to `layoutApi.getTokenShape`), `aspectFit`/`coverScaleForDesign`, `hexLayoutMode`/`hexOrientation` state, `refreshSheetControls()`, `guideMarkup()` (hex-dashed styling), `getSheetLayout()`
+- `layout-engine.js` — Layout algorithms: `getTokenShape()`, `coverScaleForShape()`, `hexSlots()`, `hexGridSlots()`, `calculateSheetLayout()` (layoutMode and hexOrientation routing); `tokenBoundsForSize()` returns swapped dimensions for pointy-top hex
+- `tests/layout-engine.test.js` — Hex grid layout, straight-cut rejection for pointy-top, pointy-top bounds and capacity tests, token shape geometry, artwork coverage scale
 - `tests/source-integrity.test.js` — Source assertions for hex-dashed guide styling and suppressTokenStroke fix
 
 ## Registry & provenance rule (portfolio-wide)
