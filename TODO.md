@@ -1,8 +1,8 @@
 # TokenMaker — TODO
 
-Resumed work list from the code review on 2026-11-11. Group 1 and group 2 are done; CI is in progress; group 3 items 2–6 are queued.
+Resumed work list from the code review on 2026-11-11. Group 1, group 2, and CI are done; group 3 items 2–6 are queued.
 
-Last audit: **53 tests passing** (`node --test tests/*.test.js`). Repo: `mgonzalvez/tokenmaker`, branch `main`, deployed to https://tokenmaker.gonzhome.us/ (Pages, legacy branch build).
+Last audit: **53 tests passing** (`node --test tests/*.test.js`). Repo: `mgonzalvez/tokenmaker`, branch `main`, deployed to https://tokenmaker.gonzhome.us/ (Pages, GitHub Actions build).
 
 ---
 
@@ -32,12 +32,12 @@ Last audit: **53 tests passing** (`node --test tests/*.test.js`). Repo: `mgonzal
 **Why:** 53 tests and zero CI. Every sibling repo has one.
 - [x] Added `.github/workflows/deploy-pages.yml`: Node 24, `node --check app.js layout-engine.js scripts/build-icon-manifest.mjs`, `node --test tests/*.test.js`, icon-manifest drift check, upload static artifact, `github-pages` deploy environment with `url: ${{ steps.deployment.outputs.page_url }}`, `workflow_dispatch` enabled.
 - [x] Added a source-integrity test asserting the workflow runs the same release checks.
-- [ ] Flip Pages from branch build to Actions:
+- [x] Flip Pages from branch build to Actions:
   ```bash
   gh api -X PUT repos/mgonzalvez/tokenmaker/pages -f build_type=workflow
   ```
   (`gh` is authenticated on this machine.)
-- [ ] Confirm the first run goes green and the custom domain still resolves.
+- [x] Confirm the first run goes green and the custom domain still resolves.
 
 ### 2. Vendor jsPDF locally — ~20–30 min
 **Why:** PDF export is the whole point of the tool, and it currently depends on a CDN script (`index.html:649`).
