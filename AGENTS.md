@@ -15,7 +15,8 @@ TokenMaker is a static, framework-free GitHub Pages application. It has no build
 7. Uploaded SVG content must pass through `normalizeSvgSource()` before it is inserted into the document.
 8. Uploaded raster artwork and SVG source text must remain serializable in project JSON.
 9. Keep the Fractal Symbols attribution in the site footer and printable PDF footer.
-10. Hex sheets support two layout modes: "straight-cut" (alternating rows, zero gutter, landscape forced, no cutting guides) and "grid" (rectangular grid, user-controlled gutter/orientation, standard cutting guides). The toggle defaults to straight-cut for backward compatibility and is only visible for hexagon sheets. Straight-cut is incompatible with pointy-top orientation and is disabled when pointy-top is active.
+10. Hex sheets support two layout modes: "straight-cut" (alternating rows, zero gutter, landscape forced, no rectangular guides) and "grid" (rectangular grid, user-controlled gutter/orientation, standard cutting guides). `layoutApi.resolveHexLayout()` is the single source of truth for which mode is active; `effectiveHexMode()` in `app.js` is the only place that reads `state.sheet.hexLayoutMode` for layout decisions, and both `getSheetLayout()` and `refreshSheetControls()` must use it. Straight-cut only exists for flat-top hexagons, so a pointy-top sheet reports `grid` even if the toggle was previously set to straight-cut. The toggle is only visible for hexagon sheets and is disabled when pointy-top is active.
+11. The `hex-dashed` guide style draws a dashed outline tracing the token shape (hexagons and octagons) and suppresses the token border in both preview and PDF export. It is offered only for hexagon sheets. Rectangular guide styles return no segments for it, so the outline comes from `guideMarkup()` in the token SVG and `drawCutGuide()` in the PDF renderer.
 
 ## Project State
 
@@ -72,8 +73,8 @@ The layout property test checks every supported shape across representative size
 ## Key Files
 
 - `index.html` — UI for designer, sheet builder, hex layout toggle, hex orientation toggle, octagon shape button
-- `app.js` — Main app logic: `shapeGeometry()` (delegates to `layoutApi.getTokenShape`), `aspectFit`/`coverScaleForDesign`, `hexLayoutMode`/`hexOrientation` state, `refreshSheetControls()`, `guideMarkup()` (hex-dashed styling), `getSheetLayout()`
-- `layout-engine.js` — Layout algorithms: `getTokenShape()`, `coverScaleForShape()`, `hexSlots()`, `hexGridSlots()`, `calculateSheetLayout()` (layoutMode and hexOrientation routing); `tokenBoundsForSize()` returns swapped dimensions for pointy-top hex
+- `app.js` — Main app logic: `shapeGeometry()` (delegates to `layoutApi.getTokenShape`), `effectiveHexMode()`, `aspectFit`/`coverScaleForDesign`, `renderTokenSvgCached()` (per-pass render cache), `hexLayoutMode`/`hexOrientation` state, `refreshSheetControls()`, `guideMarkup()` (hex-dashed styling), `getSheetLayout()`
+- `layout-engine.js` — Layout algorithms: `getTokenShape()`, `resolveHexLayout()`, `coverScaleForShape()`, `hexSlots()`, `hexGridSlots()`, `calculateSheetLayout()` (layoutMode and hexOrientation routing); `tokenBoundsForSize()` returns swapped dimensions for pointy-top hex
 - `tests/layout-engine.test.js` — Hex grid layout, straight-cut rejection for pointy-top, pointy-top bounds and capacity tests, token shape geometry, artwork coverage scale
 - `tests/source-integrity.test.js` — Source assertions for hex-dashed guide styling and suppressTokenStroke fix
 

@@ -97,6 +97,31 @@ test("cutting guide controls use combined guides and automatic hex outlines", ()
   assert.match(app, /suppressTokenStroke: design\.shape === "hexagon" && getEffectiveGuideStyle\(design\.shape\) === "hex-dashed"/);
 });
 
+test("hex layout mode, guides and cut lines share one source of truth", () => {
+  assert.match(app, /function effectiveHexMode\(specKey = state\.sheet\.specKey\)/);
+  assert.match(app, /const hexMode = effectiveHexMode\(state\.sheet\.specKey\);/);
+  assert.match(app, /const isStraightCut = effectiveHexMode\(state\.sheet\.specKey\) === "straight-cut";/);
+  assert.match(app, /effectiveHexMode\(state\.sheet\.specKey\) === "straight-cut";\n    if \(isHexStraightCut\)/);
+  assert.match(app, /hexLayoutMode: "straight-cut",\n      hexOrientation: "flat-top",/);
+  assert.match(app, /return layoutApi\.resolveHexLayout\(spec\.shape, state\.sheet\.hexLayoutMode, state\.sheet\.hexOrientation\);/);
+  assert.match(app, /if \(style !== "hex-dashed"\) return;/);
+  assert.match(app, /function traceGuideShape\(context, shape, x, y, width, height, options = {}\)/);
+  assert.match(app, /} else if \(shape === "octagon"\) \{/);
+  assert.doesNotMatch(app, /nextElementSibling/);
+  assert.match(html, /option value="hex-dashed">Dashed shape outlines \(hexagons\)<\/option>/);
+  assert.doesNotMatch(html, /option value="hex-dashed" hidden/);
+  assert.match(app, /if \(!\["combined", "perimeter", "crosshairs", "none", "hex-dashed"\]\.includes\(state\.sheet\.guideStyle\)\)/);
+});
+
+test("identical token renders are cached within a render pass", () => {
+  assert.match(app, /async function renderTokenSvgCached\(design, options = {}\)/);
+  assert.match(app, /tokenMarkupCache\.clear\(\);/);
+  assert.match(app, /const markup = await renderTokenSvgCached\(design, \{ orientation: state\.sheet\.hexOrientation \}\);/);
+  assert.match(app, /const markup = await renderTokenSvgCached\(design, \{\n          guideStyle: getEffectiveGuideStyle\(design\.shape\),/);
+  assert.match(app, /function paintedVectorMarkup\(icon, asset, fill, stroke, strokeWidth\)/);
+  assert.doesNotMatch(app, /Promise\.all\(\[\n          renderTokenSvg/);
+});
+
 test("sheet bleed is enabled by default but remains user-selectable", () => {
   assert.match(html, /id="add-bleed" type="checkbox" checked/);
   assert.match(app, /bleedIn: 0\.1/);

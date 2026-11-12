@@ -13,6 +13,7 @@ const {
   ICON_BASE_UNITS,
   inchesToUnit,
   paginatePlacements,
+  resolveHexLayout,
   unitToInches,
 } = require("../layout-engine.js");
 
@@ -476,4 +477,50 @@ test("cover scale is minimal: one percent less leaves a gap", () => {
   const justBelow = coverScaleForShape("hexagon", "flat-top") - 1;
   const half = (justBelow * ICON_BASE_UNITS / 100) / 2;
   assert.ok(Math.abs(0 - 500) > half, "the left hexagon vertex is uncovered at 161%");
+});
+
+test("hex layout mode resolves to a mode the packer can actually build", () => {
+  assert.equal(resolveHexLayout("circle", "straight-cut", "flat-top"), "grid");
+  assert.equal(resolveHexLayout("square", "straight-cut", "flat-top"), "grid");
+  assert.equal(resolveHexLayout("hexagon", "straight-cut", "flat-top"), "straight-cut");
+  assert.equal(resolveHexLayout("hexagon", "straight-cut", "pointy-top"), "grid");
+  assert.equal(resolveHexLayout("hexagon", "grid", "flat-top"), "grid");
+  assert.equal(resolveHexLayout("hexagon", undefined, "flat-top"), "grid");
+
+  for (const mode of ["straight-cut", "grid"]) {
+    for (const orientation of ["flat-top", "pointy-top"]) {
+      const resolved = resolveHexLayout("hexagon", mode, orientation);
+      const layout = calculateSheetLayout({
+        paperSize: "letter",
+        orientation: resolved === "straight-cut" ? "landscape" : "portrait",
+        shape: "hexagon",
+        sizeIn: 1.5,
+        gutterIn: resolved === "straight-cut" ? 0 : 0.25,
+        bleedIn: 0.1,
+        layoutMode: resolved,
+        hexOrientation: orientation,
+      });
+      assert.ok(layout.capacity > 0, `${mode} / ${orientation} produced no slots`);
+    }
+  }
+});
+
+test("sheet layout records the hex orientation so cut guides are centred", () => {
+  const layout = calculateSheetLayout({
+    paperSize: "letter",
+    orientation: "landscape",
+    shape: "hexagon",
+    sizeIn: 1,
+    gutterIn: 0.2,
+    bleedIn: 0.1,
+    layoutMode: "grid",
+    hexOrientation: "pointy-top",
+  });
+  assert.equal(layout.config.hexOrientation, "pointy-top");
+  const finished = getTokenBounds("hexagon", 1, "pointy-top");
+  for (const slot of getCutGuideSlots(layout)) {
+    const source = layout.slots.find((item) => item.row === slot.row && item.col === slot.col);
+    assert.ok(Math.abs(slot.width - finished.width) < 1e-9);
+    assert.ok(Math.abs(slot.x - (source.x + (source.width - finished.width) / 2)) < 1e-9);
+  }
 });

@@ -9,6 +9,8 @@
   const icons = Array.isArray(window.TOKENMAKER_ICONS) ? window.TOKENMAKER_ICONS : [];
   const layoutApi = window.TokenMakerLayout;
   const assetCache = new Map();
+  const paintedAssetCache = new Map();
+  const tokenMarkupCache = new Map();
   let renderCounter = 0;
   let previewRenderToken = 0;
   let sheetRenderToken = 0;
@@ -118,9 +120,11 @@
     touchingLayout: $("#touching-layout"),
     touchingHelp: $("#touching-help"),
     guideStyle: $("#guide-style"),
+    guideStyleHexDashedOption: $('#guide-style option[value="hex-dashed"]'),
     guideHelp: $("#guide-help"),
     hexLayoutToggleRow: $("#hex-layout-toggle-row"),
     hexLayoutToggle: $("#hex-layout-toggle"),
+    hexLayoutHelp: $("#hex-layout-help"),
     hexOrientationRow: $("#hex-orientation-row"),
     hexOrientationRowDesign: $("#hex-orientation-row-design"),
     hexOrientationToggle: $("#hex-orientation-toggle"),
@@ -287,10 +291,11 @@
       bleedIn: 0.1,
       guideStyle: "combined",
       includeBacks: false,
-        currentPage: 0,
-        placementsBySpec: {},
-        hexOrientation: "flat-top",
-      },
+      currentPage: 0,
+      hexLayoutMode: "straight-cut",
+      hexOrientation: "flat-top",
+      placementsBySpec: {},
+    },
     dragTarget: "icon",
     dirty: false,
   };
@@ -356,12 +361,21 @@
     return { shape, sizeIn: clamp(rawSize, 0.5, 3) };
   }
 
+  // Straight-cut tessellation only exists for flat-top hexagons. Pointy-top hex
+  // sheets fall back to the rectangular grid, so the controls and the packing
+  // algorithm always describe the same layout.
+  function effectiveHexMode(specKey = state.sheet.specKey) {
+    const spec = parseSpecKey(specKey || "circle|1");
+    return layoutApi.resolveHexLayout(spec.shape, state.sheet.hexLayoutMode, state.sheet.hexOrientation);
+  }
+
   function shapeLabel(shape) {
     return { circle: "Circle", square: "Square", hexagon: "Hexagon", octagon: "Octagon", triangle: "Triangle" }[shape] || "Circle";
   }
 
   function setDirty(isDirty = true) {
     state.dirty = isDirty;
+    tokenMarkupCache.clear();
     els.saveStatus.textContent = isDirty ? "Unsaved changes" : "Project saved";
     els.saveStatus.classList.toggle("dirty", isDirty);
   }
@@ -669,6 +683,15 @@
     return { x: values[0], y: values[1], width: values[2], height: values[3] };
   }
 
+  function paintedVectorMarkup(icon, asset, fill, stroke, strokeWidth) {
+    const key = `${icon.id}|${fill}|${stroke}|${strokeWidth}`;
+    if (paintedAssetCache.has(key)) return paintedAssetCache.get(key);
+    const markup = paintVectorMarkup(asset.markup, fill, stroke, strokeWidth);
+    if (paintedAssetCache.size > 240) paintedAssetCache.clear();
+    paintedAssetCache.set(key, markup);
+    return markup;
+  }
+
   async function iconMarkupFor(design, paint = {}) {
     const icon = design.icon;
     if (!icon) return "";
@@ -687,7 +710,7 @@
     const fill = paint.fill || safeHex(design.iconFill, "#17223b");
     const stroke = paint.stroke || safeHex(design.iconStroke, fill);
     const strokeWidth = paint.strokeWidth ?? clamp(design.iconStrokeWidth, 0, 12);
-    const markup = paintVectorMarkup(asset.markup, fill, stroke, strokeWidth);
+    const markup = paintedVectorMarkup(icon, asset, fill, stroke, strokeWidth);
     const bounds = viewBoxRect(asset.viewBox);
     const clipId = `tm-icon-clip-${++renderCounter}`;
     return `<g transform="${transform}"><svg x="${x0}" y="${y0}" width="${size}" height="${size}" viewBox="${escapeXml(asset.viewBox)}" preserveAspectRatio="${fit}" overflow="hidden"><defs><clipPath id="${clipId}" clipPathUnits="userSpaceOnUse"><rect x="${bounds.x}" y="${bounds.y}" width="${bounds.width}" height="${bounds.height}"/></clipPath></defs><g clip-path="url(#${clipId})">${markup}</g></svg></g>`;
@@ -714,7 +737,7 @@
   }
 
   function guideMarkup(shape, style) {
-    if (shape !== "hexagon" || style !== "hex-dashed") return "";
+    if (style !== "hex-dashed") return "";
     const geometry = shapeGeometry(shape);
     return `<path d="${geometry.path}" fill="none" stroke="#ff0000" stroke-opacity="0.8" stroke-width="3" stroke-dasharray="14 10" vector-effect="non-scaling-stroke"/>`;
   }
@@ -767,10 +790,59 @@
     </svg>`;
   }
 
+  // The same design is rendered for the design strip, the mix list, the quick-add
+  // list and the paper preview. Caching within one render pass avoids rendering
+  // the identical token several times; every edit clears the cache via setDirty().
+  function tokenMarkupKey(design, options) {
+    return [
+      design.id,
+      design.icon?.id,
+      design.shape,
+      design.sizeIn,
+      design.tokenFill,
+      design.tokenFillTransparent,
+      design.tokenStroke,
+      design.tokenStrokeWidth,
+      design.iconScale,
+      design.iconFit,
+      design.iconRotation,
+      design.iconX,
+      design.iconY,
+      design.iconStrokeWidth,
+      design.value,
+      design.valueMode,
+      design.valueFont,
+      design.valueWeight,
+      design.valueSize,
+      design.valueFill,
+      design.valueStroke,
+      design.valueStrokeWidth,
+      design.valueX,
+      design.valueY,
+      options.orientation || "flat-top",
+      options.guideStyle || "",
+      options.bleedIn || 0,
+      options.suppressTokenStroke ? 1 : 0,
+    ].join("|");
+  }
+
+  async function renderTokenSvgCached(design, options = {}) {
+    if (!design.id) return renderTokenSvg(design, options);
+    const key = tokenMarkupKey(design, options);
+    if (tokenMarkupCache.has(key)) return tokenMarkupCache.get(key);
+    const markup = await renderTokenSvg(design, options);
+    if (tokenMarkupCache.size > 60) tokenMarkupCache.clear();
+    tokenMarkupCache.set(key, markup);
+    return markup;
+  }
+
   async function renderPreview() {
     const token = ++previewRenderToken;
     try {
-      const markup = await renderTokenSvg(state.draft, { orientation: state.sheet.hexOrientation });
+      const markup = await renderTokenSvgCached(state.draft, {
+        orientation: state.sheet.hexOrientation,
+        guideStyle: getEffectiveGuideStyle(state.draft.shape),
+      });
       if (token !== previewRenderToken) return;
       const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
       const sourceRoot = doc.documentElement;
@@ -1183,10 +1255,12 @@
       card.querySelector('[data-card-action="delete"]').addEventListener("click", () => deleteDesign(design.id));
       els.designStrip.append(card);
       try {
-        const markup = await renderTokenSvg(design, { orientation: state.sheet.hexOrientation });
+        const markup = await renderTokenSvgCached(design, { orientation: state.sheet.hexOrientation });
         if (renderToken !== designStripRenderToken) return;
         $(".design-thumb", card).innerHTML = markup;
-      } catch {}
+      } catch (error) {
+        console.error("Design preview failed", error);
+      }
     }
   }
 
@@ -1230,14 +1304,18 @@
     return state.designs.filter((design) => specKeyFor(design) === state.sheet.specKey);
   }
 
+  // Dashed shape outlines are a per-shape guide style; every other style is
+  // rectangular and applies to the sheet as a whole.
   function getEffectiveGuideStyle(shape = parseSpecKey(state.sheet.specKey || "circle|1").shape) {
-    return state.sheet.guideStyle;
+    const style = state.sheet.guideStyle;
+    if (style === "hex-dashed" && shape !== "hexagon") return "combined";
+    return style;
   }
 
   function getSheetLayout() {
     const spec = parseSpecKey(state.sheet.specKey || "circle|1");
-    const isHex = spec.shape === "hexagon";
-    const isStraightCut = isHex && state.sheet.hexLayoutMode === "straight-cut" && state.sheet.hexOrientation === "flat-top";
+    const hexMode = effectiveHexMode(state.sheet.specKey);
+    const isStraightCut = hexMode === "straight-cut";
     return layoutApi.calculateSheetLayout({
       paperSize: state.sheet.paperSize,
       orientation: isStraightCut ? "landscape" : state.sheet.orientation,
@@ -1247,7 +1325,7 @@
       bleedIn: state.sheet.bleedIn,
       marginIn: state.sheet.marginIn,
       footerIn: 0.28,
-      layoutMode: isStraightCut ? "straight-cut" : "grid",
+      layoutMode: hexMode,
       hexOrientation: state.sheet.hexOrientation,
     });
   }
@@ -1304,14 +1382,13 @@
       const option = new Option(design.name, design.id);
       els.fillDesignSelect.append(option);
       try {
-        const [markup, quickMarkup] = await Promise.all([
-          renderTokenSvg(design, { orientation: state.sheet.hexOrientation }),
-          renderTokenSvg(design, { orientation: state.sheet.hexOrientation }),
-        ]);
+        const markup = await renderTokenSvgCached(design, { orientation: state.sheet.hexOrientation });
         if (renderToken !== mixRenderToken) return;
         $(".mix-item-thumb", item).innerHTML = markup;
-        $(".quick-add-thumb", quickItem).innerHTML = quickMarkup;
-      } catch {}
+        $(".quick-add-thumb", quickItem).innerHTML = markup;
+      } catch (error) {
+        console.error("Mix preview failed", error);
+      }
     }
     els.fillPageBtn.disabled = compatible.length === 0;
   }
@@ -1369,7 +1446,7 @@
   function renderPaperGuides(layout, side = "front") {
     els.paperGuides.setAttribute("viewBox", `0 0 ${layout.paper.width} ${layout.paper.height}`);
     const isHexStraightCut = layout.config.shape === "hexagon"
-      && state.sheet.hexLayoutMode === "straight-cut";
+      && effectiveHexMode(state.sheet.specKey) === "straight-cut";
     if (isHexStraightCut) {
       els.paperGuides.replaceChildren();
       return;
@@ -1481,21 +1558,23 @@
       }
       els.paperTokens.append(element);
       try {
-        const markup = await renderTokenSvg(design, {
+        const markup = await renderTokenSvgCached(design, {
           guideStyle: getEffectiveGuideStyle(design.shape),
           bleedIn: state.sheet.bleedIn,
           orientation: state.sheet.hexOrientation,
         });
         if (token !== sheetRenderToken) return;
         element.innerHTML = markup;
-      } catch {}
+      } catch (error) {
+        console.error("Sheet preview failed", error);
+      }
     }
   }
 
   function refreshSheetControls() {
     const spec = parseSpecKey(state.sheet.specKey || "circle|1");
     const isHexSheet = spec.shape === "hexagon";
-    const isStraightCut = isHexSheet && state.sheet.hexLayoutMode === "straight-cut";
+    const isStraightCut = effectiveHexMode(state.sheet.specKey) === "straight-cut";
     const isPointyTop = isHexSheet && state.sheet.hexOrientation === "pointy-top";
     if (isStraightCut) {
       state.sheet.gutterIn = 0;
@@ -1506,13 +1585,16 @@
     els.paperOrientation.disabled = isStraightCut;
     els.orientationHelp.hidden = !isHexSheet;
     els.guideStyle.value = getEffectiveGuideStyle(spec.shape);
-    els.guideHelp.textContent = state.sheet.guideStyle === "combined"
-      ? "Combined guides provide both outside crop marks and internal registration points."
-      : state.sheet.guideStyle === "perimeter"
-        ? "Crop marks appear around the outside edge of the full token grid."
-        : state.sheet.guideStyle === "crosshairs"
-          ? "Registration crosshairs appear at the corners of every token cut box."
-          : "No cutting guides will be added.";
+    if (els.guideStyleHexDashedOption) els.guideStyleHexDashedOption.hidden = !isHexSheet;
+    els.guideHelp.textContent = state.sheet.guideStyle === "hex-dashed"
+      ? "Dashed outlines trace the actual token shape, so every hexagon cut line is marked."
+      : state.sheet.guideStyle === "combined"
+        ? "Combined guides provide both outside crop marks and internal registration points."
+        : state.sheet.guideStyle === "perimeter"
+          ? "Crop marks appear around the outside edge of the full token grid."
+          : state.sheet.guideStyle === "crosshairs"
+            ? "Registration crosshairs appear at the corners of every token cut box."
+            : "No cutting guides will be added.";
     els.duplexBacks.checked = state.sheet.includeBacks;
     els.addBleed.checked = state.sheet.bleedIn > 0;
     const finishedSize = spec.sizeIn;
@@ -1541,8 +1623,7 @@
     }
     if (els.hexLayoutToggle) {
       els.hexLayoutToggle.checked = isStraightCut;
-    }
-    if (els.hexOrientationRow) {
+    }    if (els.hexOrientationRow) {
       els.hexOrientationRow.hidden = !isHexSheet;
     }
     if (els.hexOrientationRowDesign) {
@@ -1555,8 +1636,8 @@
       els.hexOrientationToggleDesign.checked = isPointyTop;
     }
     els.hexLayoutToggle.disabled = isPointyTop;
-    if (els.hexLayoutToggle) {
-      els.hexLayoutToggle.nextElementSibling.querySelector("small").textContent = isPointyTop
+    if (els.hexLayoutHelp) {
+      els.hexLayoutHelp.textContent = isPointyTop
         ? "Straight-cut is not compatible with pointy-top orientation."
         : "Alternating rows create continuous cut lines for straight line cutting.";
     }
@@ -1723,7 +1804,7 @@
     }
   }
 
-  function traceGuideShape(context, shape, x, y, width, height) {
+  function traceGuideShape(context, shape, x, y, width, height, options = {}) {
     context.beginPath();
     if (shape === "circle") {
       context.ellipse(x + width / 2, y + height / 2, width / 2, height / 2, 0, 0, Math.PI * 2);
@@ -1750,6 +1831,20 @@
           ];
       points.forEach(([px, py], index) => (index ? context.lineTo(px, py) : context.moveTo(px, py)));
       context.closePath();
+    } else if (shape === "octagon") {
+      const cut = 1 - Math.SQRT1_2;
+      const points = [
+        [x + width * cut, y],
+        [x + width * (1 - cut), y],
+        [x + width, y + height * cut],
+        [x + width, y + height * (1 - cut)],
+        [x + width * (1 - cut), y + height],
+        [x + width * cut, y + height],
+        [x, y + height * (1 - cut)],
+        [x, y + height * cut],
+      ];
+      points.forEach(([px, py], index) => (index ? context.lineTo(px, py) : context.moveTo(px, py)));
+      context.closePath();
     } else {
       context.moveTo(x + width / 2, y);
       context.lineTo(x + width, y + height);
@@ -1759,7 +1854,7 @@
   }
 
   function drawCutGuide(context, placement, shape, style, dpi, orientation = "flat-top") {
-    if (style !== "hex-dashed" || shape !== "hexagon") return;
+    if (style !== "hex-dashed") return;
     const centerX = (placement.x + placement.width / 2) * dpi;
     const centerY = (placement.y + placement.height / 2) * dpi;
     const width = placement.width * dpi;
@@ -1986,10 +2081,10 @@
         placementsBySpec: {},
         ...(project.sheet || {}),
       };
-      if (["crop", "solid", "dashed", "hex-dashed"].includes(state.sheet.guideStyle)) {
+      if (["crop", "solid", "dashed"].includes(state.sheet.guideStyle)) {
         state.sheet.guideStyle = "combined";
       }
-      if (!["combined", "perimeter", "crosshairs", "none"].includes(state.sheet.guideStyle)) {
+      if (!["combined", "perimeter", "crosshairs", "none", "hex-dashed"].includes(state.sheet.guideStyle)) {
         state.sheet.guideStyle = "combined";
       }
       state.sheet.includeBacks = Boolean(state.sheet.includeBacks);

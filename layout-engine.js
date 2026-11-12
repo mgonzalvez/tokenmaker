@@ -85,6 +85,13 @@
     return tokenBoundsForSize(shape, finishedSize + bleed * 2, orientation);
   }
 
+  // Straight-cut tessellation is only defined for flat-top hexagons; every other
+  // combination falls back to the rectangular grid.
+  function resolveHexLayout(shape, hexLayoutMode = "grid", hexOrientation = "flat-top") {
+    if (shape !== "hexagon") return "grid";
+    return hexLayoutMode === "straight-cut" && hexOrientation !== "pointy-top" ? "straight-cut" : "grid";
+  }
+
   function getTokenShape(shape, orientation = "flat-top") {
     const entry = TOKEN_SHAPES[shape] || TOKEN_SHAPES.circle;
     if (shape === "hexagon") {
@@ -257,6 +264,7 @@
       sizeIn: clamp(options.sizeIn ?? 1, 0.5, 3),
       gutterIn: clamp(options.gutterIn ?? 0.3, 0, 1),
       bleedIn: clamp(options.bleedIn ?? 0, 0, 0.25),
+      hexOrientation: options.hexOrientation === "pointy-top" ? "pointy-top" : "flat-top",
     };
     const usable = {
       x: marginIn,
@@ -324,7 +332,7 @@
   }
 
   function getCutGuideSlots(layout) {
-    const finished = getTokenBounds(layout.config.shape, layout.config.sizeIn);
+    const finished = getTokenBounds(layout.config.shape, layout.config.sizeIn, layout.config.hexOrientation);
     return layout.slots.map((slot) => ({
       ...slot,
       x: slot.x + (slot.width - finished.width) / 2,
@@ -416,6 +424,7 @@
     getTokenShape,
     inchesToUnit,
     paginatePlacements,
+    resolveHexLayout,
     unitToInches,
   });
 });
