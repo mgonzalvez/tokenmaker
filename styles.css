@@ -1748,6 +1748,22 @@ select:focus,
   outline-offset: 2px;
 }
 
+.paper-token:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.design-sync-note {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.primary-button.pending-update {
+  box-shadow: 0 0 0 3px rgba(196, 92, 60, 0.24);
+}
+
 .paper-token svg {
   width: 100%;
   height: 100%;

@@ -18,6 +18,8 @@
   let mixRenderToken = 0;
   let activeCategory = "All";
   let dragState = null;
+  let pendingFocusIndex = null;
+  let previewViewBox = { x: 0, y: 0, width: 1000, height: 1000 };
   let draggedPlacementIndex = null;
   let tutorialPositionTimer = null;
   const tutorialState = {
@@ -56,6 +58,7 @@
     uploadArtInput: $("#upload-art-input"),
     designName: $("#design-name"),
     dimensions: $("#draft-dimensions"),
+    designSyncNote: $("#design-sync-note"),
     resetDraftBtn: $("#reset-draft-btn"),
     tokenPreviewWrap: $("#token-preview-wrap"),
     tokenPreview: $("#token-preview"),
@@ -373,9 +376,48 @@
     return { circle: "Circle", square: "Square", hexagon: "Hexagon", octagon: "Octagon", triangle: "Triangle" }[shape] || "Circle";
   }
 
+  function designSignature(design) {
+    return [
+      design.name,
+      design.shape,
+      design.sizeIn,
+      design.tokenFill,
+      design.tokenFillTransparent,
+      design.tokenStroke,
+      design.tokenStrokeWidth,
+      design.icon?.id,
+      design.iconScale,
+      design.iconFit,
+      design.iconRotation,
+      design.iconX,
+      design.iconY,
+      design.iconStrokeWidth,
+      design.value,
+      design.valueMode,
+      design.valueFont,
+      design.valueWeight,
+      design.valueSize,
+      design.valueFill,
+      design.valueStroke,
+      design.valueStrokeWidth,
+      design.valueX,
+      design.valueY,
+    ].join("|");
+  }
+
+  // A design only reaches the sheet when the user commits it with Add/Update,
+  // so make an edited-but-uncommitted draft impossible to miss.
+  function updateDesignSyncNote() {
+    const saved = state.designs.find((design) => design.id === state.draft.id);
+    const differs = Boolean(saved) && designSignature(saved) !== designSignature(state.draft);
+    els.designSyncNote.hidden = !differs;
+    els.addDesignBtn.classList.toggle("pending-update", differs);
+  }
+
   function setDirty(isDirty = true) {
     state.dirty = isDirty;
     tokenMarkupCache.clear();
+    updateDesignSyncNote();
     els.saveStatus.textContent = isDirty ? "Unsaved changes" : "Project saved";
     els.saveStatus.classList.toggle("dirty", isDirty);
   }
@@ -796,29 +838,7 @@
   function tokenMarkupKey(design, options) {
     return [
       design.id,
-      design.icon?.id,
-      design.shape,
-      design.sizeIn,
-      design.tokenFill,
-      design.tokenFillTransparent,
-      design.tokenStroke,
-      design.tokenStrokeWidth,
-      design.iconScale,
-      design.iconFit,
-      design.iconRotation,
-      design.iconX,
-      design.iconY,
-      design.iconStrokeWidth,
-      design.value,
-      design.valueMode,
-      design.valueFont,
-      design.valueWeight,
-      design.valueSize,
-      design.valueFill,
-      design.valueStroke,
-      design.valueStrokeWidth,
-      design.valueX,
-      design.valueY,
+      designSignature(design),
       options.orientation || "flat-top",
       options.guideStyle || "",
       options.bleedIn || 0,
@@ -842,10 +862,13 @@
       const markup = await renderTokenSvgCached(state.draft, {
         orientation: state.sheet.hexOrientation,
         guideStyle: getEffectiveGuideStyle(state.draft.shape),
+        bleedIn: state.sheet.bleedIn,
       });
       if (token !== previewRenderToken) return;
       const doc = new DOMParser().parseFromString(markup, "image/svg+xml");
       const sourceRoot = doc.documentElement;
+      previewViewBox = viewBoxRect(sourceRoot.getAttribute("viewBox"));
+      els.tokenPreview.setAttribute("viewBox", sourceRoot.getAttribute("viewBox") || "0 0 1000 1000");
       els.tokenPreview.replaceChildren(...[...sourceRoot.childNodes].map((node) => document.importNode(node, true)));
       els.tokenPreview.setAttribute("aria-label", `${state.draft.name} preview`);
     } catch (error) {
@@ -884,8 +907,8 @@
   function syncDraftControls() {
     const draft = state.draft;
     els.designName.value = draft.name;
-    $$(".shape-button").forEach((button) => button.classList.toggle("active", button.dataset.shape === draft.shape));
-    $$(".unit-toggle button").forEach((button) => button.classList.toggle("active", button.dataset.unit === state.unit));
+    $$(".shape-button").forEach((button) => setToggleActive(button, button.dataset.shape === draft.shape));
+    $$(".unit-toggle button").forEach((button) => setToggleActive(button, button.dataset.unit === state.unit));
     const displayedSize = layoutApi.inchesToUnit(draft.sizeIn, state.unit);
     if (state.unit === "mm") {
       els.sizeRange.min = "12.7";
@@ -920,7 +943,7 @@
     els.iconScale.value = draft.iconScale;
     els.iconScaleOutput.textContent = `${draft.iconScale}%`;
     $$("[data-icon-fit]").forEach((button) =>
-      button.classList.toggle("active", button.dataset.iconFit === draft.iconFit),
+      setToggleActive(button, button.dataset.iconFit === draft.iconFit),
     );
     els.iconRotation.value = draft.iconRotation;
     els.iconRotationOutput.textContent = `${draft.iconRotation}°`;
@@ -937,10 +960,10 @@
     els.valueStrokeWidth.value = draft.valueStrokeWidth;
     els.valueStrokeOutput.textContent = `${draft.valueStrokeWidth} px`;
     $$("[data-value-placement]").forEach((button) =>
-      button.classList.toggle("active", button.dataset.valuePlacement === draft.valuePlacement),
+      setToggleActive(button, button.dataset.valuePlacement === draft.valuePlacement),
     );
     $$("[data-drag-target]").forEach((button) =>
-      button.classList.toggle("active", button.dataset.dragTarget === state.dragTarget),
+      setToggleActive(button, button.dataset.dragTarget === state.dragTarget),
     );
     els.addDesignBtn.innerHTML = draft.id
       ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg> Update design'
@@ -1434,6 +1457,17 @@
     refreshSheet();
   }
 
+  function swapPlacements(fromIndex, toIndex) {
+    const placements = getPlacements();
+    if (!Number.isInteger(fromIndex) || !Number.isInteger(toIndex)) return;
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) return;
+    if (fromIndex >= placements.length || toIndex >= placements.length) return;
+    [placements[fromIndex], placements[toIndex]] = [placements[toIndex], placements[fromIndex]];
+    pendingFocusIndex = toIndex;
+    setDirty();
+    refreshSheetPreview();
+  }
+
   function getGuideSlotsForSide(layout, side) {
     const cutSlots = layoutApi.getCutGuideSlots(layout);
     if (side !== "back") return cutSlots;
@@ -1497,7 +1531,7 @@
         ? `${placements.length} placed across ${contentPages.length} ${contentPages.length === 1 ? "sheet" : "sheets"} · ${printablePages.length} PDF pages.`
         : `${placements.length} placed across ${contentPages.length} ${contentPages.length === 1 ? "page" : "pages"}.`
       : layout.config.shape === "hexagon"
-        ? state.sheet.hexLayoutMode === "straight-cut"
+        ? effectiveHexMode(state.sheet.specKey) === "straight-cut"
           ? `Straight-cut template · ${displayMeasurement(layout.config.sizeIn)}`
           : `Grid layout · ${displayMeasurement(layout.config.sizeIn)}`
         : `${shapeLabel(layout.config.shape)} · ${displayMeasurement(layout.config.sizeIn)}`;
@@ -1545,15 +1579,22 @@
           event.preventDefault();
           element.classList.remove("drag-over");
           const targetIndex = Number(element.dataset.placementIndex);
-          if (Number.isInteger(draggedPlacementIndex) && draggedPlacementIndex !== targetIndex) {
-            [placements[draggedPlacementIndex], placements[targetIndex]] = [
-              placements[targetIndex],
-              placements[draggedPlacementIndex],
-            ];
-            setDirty();
-            refreshSheetPreview();
-          }
+          swapPlacements(draggedPlacementIndex, targetIndex);
           draggedPlacementIndex = null;
+        });
+        element.tabIndex = 0;
+        element.setAttribute("role", "button");
+        element.setAttribute(
+          "aria-label",
+          `${design.name} · token ${localIndex + 1} on this page. Press the left or right arrow key to swap it with a neighbour.`,
+        );
+        element.addEventListener("keydown", (event) => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          swapPlacements(
+            Number(element.dataset.placementIndex),
+            Number(element.dataset.placementIndex) + (event.key === "ArrowLeft" ? -1 : 1),
+          );
         });
       }
       els.paperTokens.append(element);
@@ -1568,6 +1609,12 @@
       } catch (error) {
         console.error("Sheet preview failed", error);
       }
+    }
+
+    if (pendingFocusIndex !== null) {
+      const focusTarget = els.paperTokens.querySelector(`[data-placement-index="${pendingFocusIndex}"]`);
+      pendingFocusIndex = null;
+      if (focusTarget) focusTarget.focus({ preventScroll: true });
     }
   }
 
@@ -1662,6 +1709,11 @@
     refreshSheet();
   }
 
+  function setToggleActive(button, isActive) {
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  }
+
   function updateDraftFromSizeInput(rawValue) {
     const inches = layoutApi.unitToInches(rawValue, state.unit);
     state.draft.sizeIn = clamp(inches, 0.5, 3);
@@ -1697,6 +1749,34 @@
     });
   }
 
+  function nudgeDraftTarget(deltaX, deltaY) {
+    const targetKey = state.dragTarget === "value" ? "value" : "icon";
+    state.draft[`${targetKey}X`] = clamp(state.draft[`${targetKey}X`] + deltaX, -45, 45);
+    state.draft[`${targetKey}Y`] = clamp(state.draft[`${targetKey}Y`] + deltaY, -45, 45);
+    if (targetKey === "value") {
+      state.draft.valuePlacement = "custom";
+      $$("[data-value-placement]").forEach((button) =>
+        setToggleActive(button, button.dataset.valuePlacement === "custom"),
+      );
+    }
+    setDirty();
+    renderPreview();
+  }
+
+  function handlePreviewKeyDown(event) {
+    const step = event.shiftKey ? 5 : 1;
+    const movements = {
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+    };
+    const movement = movements[event.key];
+    if (!movement) return;
+    event.preventDefault();
+    nudgeDraftTarget(movement[0], movement[1]);
+  }
+
   function handlePreviewPointerDown(event) {
     if (event.button !== 0) return;
     const targetKey = state.dragTarget === "value" ? "value" : "icon";
@@ -1718,12 +1798,14 @@
     const rect = els.tokenPreviewWrap.getBoundingClientRect();
     const dx = (event.clientX - dragState.startX) / rect.width * 100;
     const dy = (event.clientY - dragState.startY) / rect.height * 100;
-    state.draft[`${dragState.targetKey}X`] = clamp(dragState.originalX + dx, -45, 45);
-    state.draft[`${dragState.targetKey}Y`] = clamp(dragState.originalY + dy, -45, 45);
+    const scaleX = previewViewBox.width / 1000;
+    const scaleY = previewViewBox.height / 1000;
+    state.draft[`${dragState.targetKey}X`] = clamp(dragState.originalX + dx * scaleX, -45, 45);
+    state.draft[`${dragState.targetKey}Y`] = clamp(dragState.originalY + dy * scaleY, -45, 45);
     if (dragState.targetKey === "value") {
       state.draft.valuePlacement = "custom";
       $$("[data-value-placement]").forEach((button) =>
-        button.classList.toggle("active", button.dataset.valuePlacement === "custom"),
+        setToggleActive(button, button.dataset.valuePlacement === "custom"),
       );
     }
     setDirty();
@@ -2291,9 +2373,10 @@
     $$("[data-drag-target]").forEach((button) => {
       button.addEventListener("click", () => {
         state.dragTarget = button.dataset.dragTarget;
-        $$("[data-drag-target]").forEach((node) => node.classList.toggle("active", node === button));
+        $$("[data-drag-target]").forEach((node) => setToggleActive(node, node === button));
       });
     });
+    els.tokenPreviewWrap.addEventListener("keydown", handlePreviewKeyDown);
     els.tokenPreviewWrap.addEventListener("pointerdown", handlePreviewPointerDown);
     els.tokenPreviewWrap.addEventListener("pointermove", handlePreviewPointerMove);
     els.tokenPreviewWrap.addEventListener("pointerup", handlePreviewPointerUp);

@@ -58,6 +58,16 @@ TokenMaker is an MVP ready for functional validation and iterative polishing. It
 
 Every sheet uses one token shape and one finished physical size. Artwork, colors, and numeric values may differ between designs on that sheet.
 
+Editing a design that is already in the project changes the draft only. The preview panel shows a note until you press **Update design**, which is what pushes the change to the design strip, the token mix, and the PDF.
+
+## Keyboard and accessibility
+
+- Focus the token preview and use the arrow keys to move the icon or value (Shift for a five-step jump).
+- Focus a placed token on the sheet preview and press the left or right arrow key to swap it with its neighbour — no mouse or drag required.
+- Shape, unit, artwork-fit, value-placement, and drag-target controls report their state with `aria-pressed`.
+- The icon count and error messages are announced through `aria-live` regions; the tutorial responds to `Escape`.
+- Motion is reduced when the browser reports `prefers-reduced-motion`.
+
 ## Run Locally
 
 Opening `index.html` directly is not sufficient because browsers restrict local SVG loading. Serve the repository over HTTP instead:
@@ -86,6 +96,8 @@ The tests cover:
 - physical unit conversion and supported size limits;
 - bleed, gutter, margin, paper, and pagination calculations;
 - circle, square, octagon, straight-cut hexagon, and pointy-top hexagon placement;
+- token-shape geometry and the artwork coverage scale for every shape, rotation, and aspect ratio;
+- hex layout mode resolution, so the controls never claim straight-cut for a layout the packer cannot build;
 - mirrored duplex page geometry;
 - cutting-guide generation;
 - DOM/source integrity and GitHub Pages configuration;

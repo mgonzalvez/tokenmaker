@@ -159,3 +159,40 @@ test("copyright, feedback, Ko-fi, and current related-site links are present", (
 test("Related sites appears before the light and dark mode toggle", () => {
   assert.ok(html.indexOf('id="related-btn"') < html.indexOf('id="theme-btn"'));
 });
+
+test("the designer is operable without a mouse", () => {
+  assert.match(html, /id="token-preview-wrap" class="token-preview-wrap" tabindex="0"/);
+  assert.match(app, /els\.tokenPreviewWrap\.addEventListener\("keydown", handlePreviewKeyDown\)/);
+  assert.match(app, /function handlePreviewKeyDown\(event\) \{/);
+  assert.match(app, /const step = event\.shiftKey \? 5 : 1;/);
+  assert.match(app, /function nudgeDraftTarget\(deltaX, deltaY\)/);
+  assert.match(html, /aria-label="Token preview\. Press the arrow keys to move the selected element; hold Shift for larger steps\."/);
+  assert.match(html, /Drag the preview or use the arrow keys to position/);
+  assert.match(app, /function swapPlacements\(fromIndex, toIndex\)/);
+  assert.match(html, /focus one and press the arrow keys.*to swap their order/);
+  assert.match(app, /element\.addEventListener\("keydown", \(event\) => \{[\s\S]*?swapPlacements\(/);
+  assert.match(app, /pendingFocusIndex = toIndex;/);
+  assert.match(app, /focusTarget\.focus\(\{ preventScroll: true \}\)/);
+});
+
+test("toggle controls expose their state to assistive technology", () => {
+  assert.match(app, /function setToggleActive\(button, isActive\) \{[\s\S]*?aria-pressed/);
+  assert.match(html, /data-drag-target="icon" aria-pressed="true"/);
+  assert.match(html, /data-drag-target="value" aria-pressed="false"/);
+  assert.match(html, /id="icon-count" class="count-pill" aria-live="polite"/);
+  assert.doesNotMatch(html, /id="icon-grid" class="icon-grid" aria-live/);
+});
+
+test("an edited draft is flagged before it reaches the sheet", () => {
+  assert.match(html, /id="design-sync-note" class="design-sync-note" hidden/);
+  assert.match(app, /function designSignature\(design\)/);
+  assert.match(app, /function updateDesignSyncNote\(\)/);
+  assert.match(app, /els\.addDesignBtn\.classList\.toggle\("pending-update", differs\)/);
+  assert.match(app, /updateDesignSyncNote\(\);\n    els\.saveStatus\.textContent/);
+});
+
+test("the preview shows the bleed that the sheet will print", () => {
+  assert.match(app, /const markup = await renderTokenSvgCached\(state\.draft, \{\n        orientation: state\.sheet\.hexOrientation,\n        guideStyle: getEffectiveGuideStyle\(state\.draft\.shape\),\n        bleedIn: state\.sheet\.bleedIn,\n      \}\)/);
+  assert.match(app, /els\.tokenPreview\.setAttribute\("viewBox", sourceRoot\.getAttribute\("viewBox"\)/);
+  assert.match(app, /const scaleX = previewViewBox\.width \/ 1000;/);
+});

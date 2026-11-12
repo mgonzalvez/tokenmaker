@@ -103,7 +103,7 @@
               <p class="step-label">Artwork</p>
               <h2>Choose an icon</h2>
             </div>
-            <span id="icon-count" class="count-pill">312</span>
+            <span id="icon-count" class="count-pill" aria-live="polite">312</span>
           </div>
 
           <label class="search-field">
@@ -113,7 +113,7 @@
 
           <div id="category-chips" class="category-chips" aria-label="Icon categories"></div>
 
-          <div id="icon-grid" class="icon-grid" aria-live="polite"></div>
+          <div id="icon-grid" class="icon-grid"></div>
           <p id="no-icon-results" class="empty-message" hidden>No symbols match that search.</p>
 
           <div class="upload-block">
@@ -140,15 +140,19 @@
 
           <div class="token-stage">
             <div class="stage-glow" aria-hidden="true"></div>
-            <div id="token-preview-wrap" class="token-preview-wrap">
+            <div id="token-preview-wrap" class="token-preview-wrap" tabindex="0"
+              aria-label="Token preview. Press the arrow keys to move the selected element; hold Shift for larger steps.">
               <svg id="token-preview" viewBox="0 0 1000 1000" role="img" aria-label="Live token preview"></svg>
             </div>
             <p class="drag-hint">
-              Drag the preview to position
+              Drag the preview or use the arrow keys to position
               <span class="drag-target-control" role="group" aria-label="Preview drag target">
-                <button class="mini-segment active" type="button" data-drag-target="icon">icon</button>
-                <button class="mini-segment" type="button" data-drag-target="value">value</button>
+                <button class="mini-segment active" type="button" data-drag-target="icon" aria-pressed="true">icon</button>
+                <button class="mini-segment" type="button" data-drag-target="value" aria-pressed="false">value</button>
               </span>
+            </p>
+            <p id="design-sync-note" class="design-sync-note" hidden>
+              This draft differs from the saved design. Select <b>Update design</b> to apply it to the sheet.
             </p>
           </div>
 
@@ -559,7 +563,7 @@
             </div>
             <span id="placed-count" class="count-pill">0 placed</span>
           </div>
-          <p class="panel-intro">Add copies after designing. Drag placed tokens in the preview to swap their order.</p>
+          <p class="panel-intro">Add copies after designing. Drag placed tokens in the preview — or focus one and press the arrow keys — to swap their order.</p>
           <div id="mix-list" class="mix-list"></div>
           <div id="mix-empty" class="empty-message-box">
             <p>Add at least one token design before building a sheet.</p>
