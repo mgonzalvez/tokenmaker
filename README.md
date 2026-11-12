@@ -122,6 +122,7 @@ Do not hand-edit `icon-manifest.js`.
 | Path | Purpose |
 | --- | --- |
 | `index.html` | Application interface and publishing entry point |
+| `.github/workflows/deploy-pages.yml` | Runs the release checks and publishes the Pages artifact |
 | `styles.css` | Gonzhome visual system and responsive layouts |
 | `app.js` | Editor state, rendering, project management, and export |
 | `layout-engine.js` | Framework-independent physical sheet geometry |
@@ -162,8 +163,8 @@ TokenMaker is designed to publish directly from the repository root.
 
 1. Create or connect the GitHub repository.
 2. Push the project to the `main` branch.
-3. In **Settings → Pages**, choose **Deploy from a branch**.
-4. Select branch `main` and folder `/ (root)`.
+3. In **Settings → Pages**, choose **GitHub Actions**.
+4. The `.github/workflows/deploy-pages.yml` workflow runs the release checks on every push to `main` and uploads the repository root as the Pages artifact.
 5. Confirm the custom domain is `tokenmaker.gonzhome.us`.
 6. Configure the `tokenmaker` DNS record for the repository’s GitHub Pages hostname.
 7. Enable **Enforce HTTPS** after GitHub validates the domain.

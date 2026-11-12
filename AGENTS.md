@@ -72,6 +72,8 @@ node --test tests/*.test.js
 
 The layout property test checks every supported shape across representative sizes, gutters, paper sizes, and orientations.
 
+`.github/workflows/deploy-pages.yml` runs the same checks on every push to `main` and fails if `icon-manifest.js` drifts from a fresh generator run.
+
 ## Key Files
 
 - `index.html` — UI for designer, sheet builder, hex layout toggle, hex orientation toggle, octagon shape button

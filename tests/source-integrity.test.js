@@ -38,6 +38,19 @@ test("GitHub Pages custom domain is configured", () => {
   assert.equal(cname, "tokenmaker.gonzhome.us");
 });
 
+test("the Pages workflow runs the release checks before deploying", () => {
+  const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "deploy-pages.yml"), "utf8");
+  assert.match(workflow, /branches: \["main"\]/);
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /node --check app\.js/);
+  assert.match(workflow, /node --check layout-engine\.js/);
+  assert.match(workflow, /node --check scripts\/build-icon-manifest\.mjs/);
+  assert.match(workflow, /node --test tests\/\*\.test\.js/);
+  assert.match(workflow, /path: \./);
+  assert.match(workflow, /name: github-pages/);
+  assert.match(workflow, /actions\/deploy-pages@v4/);
+});
+
 test("imported vectors are clipped to their declared viewBox", () => {
   assert.match(app, /preserveAspectRatio="\$\{fit\}" overflow="hidden"/);
   assert.match(app, /clipPathUnits="userSpaceOnUse"/);
